@@ -1,8 +1,10 @@
 import os.path
+import pickle
 
 import pandas as pd
+from matplotlib import pyplot as plt
 from sklearn.metrics import mean_absolute_error
-
+import seaborn as sns
 from analysis.imputation.phylnn_predictions import continuous_output_path, continuous_input_path
 
 
@@ -28,7 +30,19 @@ def evaluate_continuous_outputs(tag):
     print(
         f'phylopars vs phylnn: phylopars score: {phylopars_score} vs phylnn score: {phylnn_score} = {phylopars_score - phylnn_score}'
     )
-    pass
+
+
+def evaluate_model_params(tags):
+    lambdas = []
+    ratio_max_dists = []
+    for t in tags:
+        lamba = pd.read_csv(os.path.join(continuous_input_path, t, 'dataframe_params.csv'))['lambda'].iloc[0]
+        ratio = pickle.load(os.path.join(continuous_output_path, t, 'phylnn_hparams.pkl'))['ratio_max_branch_length']
+        lambdas.append(lamba)
+        ratio_max_dists.append(ratio)
+
+    sns.scatterplot(x=lambdas, y=ratio_max_dists)
+    plt.savefig('lambda_ratio_plot.jpg', dpi=300)
 
 
 if __name__ == '__main__':

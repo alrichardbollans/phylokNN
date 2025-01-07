@@ -1,17 +1,14 @@
 # Do binary and continuous cases under different evolutionary assumptions
 # https://github.com/Matgend/TDIP
-# install.packages(c('mlr3pipelines', 'missMDA', 'mlr3learners', 'Amelia', 'softImpute', 'missRanger'))
-# install.packages("NADIA_0.4.2.tar.gz", repos = NULL, type = "source")
-# install.packages(c('truncnorm'))
-# install.packages("faux_1.2.1.tar.gz", repos = NULL, type = "source")
-# devtools::install_github("Matgend/TDIP")
+install.packages(c('mlr3pipelines', 'missMDA', 'mlr3learners', 'Amelia', 'softImpute', 'missRanger'))
+install.packages(c('missForest', 'VIM'))
+install.packages("NADIA_0.4.2.tar.gz", repos = NULL, type = "source")
+install.packages(c('truncnorm'))
+install.packages("faux_1.2.1.tar.gz", repos = NULL, type = "source")
+remotes::install_version("geiger", version = "2.0.10") # see https://github.com/Matgend/TDIP/issues/1
+devtools::install_github("Matgend/TDIP")
 library(TDIP)
 # save distances, traits and trees to simulation folder, for phylonn to use
-
-# see https://github.com/Matgend/TDIP/issues/1
-
-# data(dataframe)
-# names(dataframe)
 
 output_simulation <- function(simData, tree, tag,id){
   #PhyloNa
@@ -39,18 +36,22 @@ output_simulation <- function(simData, tree, tag,id){
 }
 
 for(i in 1:10){
+  ev_models = c('BM1', 'OU1')
+  ev_model = ev_models[[sample(1:length(ev_models), 1)]]
+  lambda = runif(1, min=0, max=1)
+  kappa = runif(1, min=0, max=1)
   #### parameters here
-  param_tree <- list(0.4, 0.1, 100)
+  param_tree <- list(0.4, 0.1, 500)
   missingRate <- 0.1
   continuous_dataframe = data.frame(nbr_traits=c(1),
                                     class=c('continuous'),
-                                    model = c('BM1'),
+                                    model = c(ev_model),
                                     states = c(1),
                                     correlation = c(1),
                                     uncorr_traits = c(1),
                                     fraction_uncorr_traits = c(0),
-                                    lambda = c(0.8),
-                                    kappa = c(1),
+                                    lambda = c(lambda),
+                                    kappa = c(kappa),
                                     highCor = c(0),
                                     manTrait = c(0))
   simcontinuousData <- data_simulator(param_tree = param_tree, 
@@ -60,16 +61,19 @@ for(i in 1:10){
   
 }
 for(i in 1:10){
-
+  ev_models = c('ARD', 'SYM', 'ER')
+  ev_model = ev_models[[sample(1:length(ev_models), 1)]]
+  lambda = runif(1, min=0, max=1)
+  kappa = runif(1, min=0, max=1)
   binary_dataframe = data.frame(nbr_traits=c(1),
                                     class=c('ordinal'),
-                                    model = c('BM1'),
+                                    model = c(ev_model),
                                     states = c(2),
                                     correlation = c(1),
                                     uncorr_traits = c(1),
                                     fraction_uncorr_traits = c(0),
-                                    lambda = c(0.8),
-                                    kappa = c(1),
+                                    lambda = c(ev_model),
+                                    kappa = c(kappa),
                                     highCor = c(0),
                                     manTrait = c(0))
   
