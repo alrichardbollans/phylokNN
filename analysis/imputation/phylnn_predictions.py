@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, brier_score_loss
 from sklearn.model_selection import KFold
 
-from analysis.imputation.phylogenetic_neighbours_model import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn
+from phyloNN.phylogenetic_neighbours_model import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn
 
 repo_path = os.environ.get('KEWSCRATCHPATH')
 data_path = os.path.join(repo_path, 'PhyloNN', 'analysis', 'data')
