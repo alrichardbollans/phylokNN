@@ -23,6 +23,11 @@ def evaluate_bin_output(tag):
     full_df = pd.merge(test_ground_truths, my_predictions, left_index=True, right_index=True)
     full_df = pd.merge(full_df, RcorHMM_predictions, left_index=True, right_index=True)
 
+    nans_from_mine = full_df[full_df['PhyloNN'].isna()]
+    if len(nans_from_mine) > 0:
+        print(f'Warning: dropping {len(nans_from_mine)} nans from analysis.')
+        full_df = full_df.dropna(subset=['PhyloNN'])
+
     corHMM_score = brier_score_loss(full_df[gt_target_name], full_df['corHMM'])
     phylnn_score = brier_score_loss(full_df[gt_target_name], full_df['PhyloNN'])
     return phylnn_score, corHMM_score
