@@ -27,7 +27,7 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
     '''
 
     def __init__(self, distance_matrix: pd.DataFrame, clf: bool, ratio_max_branch_length: float,
-                 kappa: float):
+                 kappa: float, fill_in_unknowns_with_mean: bool = True):
         """
         :param distance_matrix: A pandas DataFrame representing the distance matrix between instances. Indices and columns should be taxon names. Should include all train, test species and unknown species for predictions.
         :param clf: A boolean indicating whether to output binary classes or continuous estimates for final predictions
@@ -42,6 +42,7 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
         self.ratio_max_branch_length = ratio_max_branch_length
 
         self.kappa = kappa
+        self.fill_in_unknowns_with_mean = fill_in_unknowns_with_mean
 
     @staticmethod
     def check_integrity_of_distance_matrix(dist_matrix: pd.DataFrame):
@@ -84,7 +85,7 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
     @staticmethod
     def predict_phylogenetic_neighbours(dist_matrix: pd.DataFrame, train_plants: list, plants_to_predict: list, target_df: pd.DataFrame,
                                         target_name: str,
-                                        kappa: float, max_distance: float, sample_weight=None):
+                                        kappa: float, max_distance: float, sample_weight=None, fill_in_unknowns_with_mean: bool = True):
         """
 
         :param dist_matrix: The distance matrix containing phylogenetic distances between plants.
@@ -143,11 +144,14 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
                     normalised_sum = weighted_sum / (max_dist_df['inverse_distance'].sum())
                     results[sp] = normalised_sum
                 else:
-                    if sample_weight is not None:
-                        results[sp] = (species_training_data[target_name] * species_training_data['sample_weight']).sum() / species_training_data[
-                            'sample_weight'].sum()
+                    if fill_in_unknowns_with_mean:
+                        if sample_weight is not None:
+                            results[sp] = (species_training_data[target_name] * species_training_data['sample_weight']).sum() / species_training_data[
+                                'sample_weight'].sum()
+                        else:
+                            results[sp] = species_training_data[target_name].mean()
                     else:
-                        results[sp] = species_training_data[target_name].mean()
+                        results[sp] = np.nan
         out_df = pd.DataFrame.from_dict(results, orient='index', columns=['estimate'])
 
         return out_df
@@ -193,7 +197,7 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
 
         return self
 
-    def _get_data_with_predictions(self, X_test: Union[pd.Series, list], fill_in_unknowns_with_mean: bool = True) -> pd.DataFrame:
+    def _get_data_with_predictions(self, X_test: Union[pd.Series, list]) -> pd.DataFrame:
         '''
         Uses phylogenetic data and labelled data of species in self.train_plants, to predict APM activity of plants given in X.
         :param X_test:
@@ -218,13 +222,14 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
         prediction_df = self.predict_phylogenetic_neighbours(distances, relevant_train_plants, relevant_test_plants, self.labelled_training_data,
                                                              self.target_name, sample_weight=self.sample_weight,
                                                              kappa=self.kappa,
-                                                             max_distance=self.max_distance)
+                                                             max_distance=self.max_distance,
+                                                             fill_in_unknowns_with_mean=self.fill_in_unknowns_with_mean)
         X = pd.Series(plants_to_predict, name='index_names')
         data_with_predictions = pd.merge(X, prediction_df, left_on='index_names',
                                          right_index=True,
                                          how='left')
         data_with_predictions = data_with_predictions.set_index('index_names', drop=True)
-        if fill_in_unknowns_with_mean:
+        if self.fill_in_unknowns_with_mean:
             self.fill_in_mean_activities(data_with_predictions)
         assert list(data_with_predictions.index) == plants_to_predict
         return data_with_predictions
@@ -259,11 +264,12 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                                            val_scorer: callable, greater_is_better: bool,
                                            kappas: list = None,
                                            ratios: list = None,
-                                           sample_weight=None):
+                                           sample_weight=None, fill_in_unknowns_with_mean: bool = True):
     """
     Does inner cross validation to return the best hyperparameters for the model.
 
     Maybe reuse/update this
+    :param fill_in_unknowns_with_mean: whether to fill NaN predictions with mean during tuning.
     :param sample_weight:
     :param ratios:
     :param kappas:
@@ -279,10 +285,10 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
     relevant_species = list(set(X_train.index).intersection(set(distance_matrix.index)))
     distance_matrix_for_nested_cv = distance_matrix.loc[relevant_species, relevant_species]
     if ratios is None:
-        ratios = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
     if kappas is None:
-        kappas = [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3, 4]
+        kappas = [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]
 
     best_score = None
     best_hyperparams = None
@@ -310,36 +316,47 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                 else:
                     inner_train_weights = None
 
-                estim = PhylNearestNeighbours(distance_matrix_for_nested_cv, clf, ratio, kappa)
+                estim = PhylNearestNeighbours(distance_matrix_for_nested_cv, clf, ratio, kappa, fill_in_unknowns_with_mean=fill_in_unknowns_with_mean)
                 estim.fit(X_inner_train.index, y_inner_train, sample_weight=inner_train_weights)
 
                 # Note that this fills in nan values, so if the max distance is restrictive mean values will be output.
                 prediction_df = estim._get_data_with_predictions(X_inner_validation.index)
+                pd.testing.assert_index_equal(prediction_df.index, X_inner_validation.index, check_names=False)
+                pd.testing.assert_index_equal(prediction_df.index, y_inner_validation.index, check_names=False)
 
-                if sample_weight is not None:
-                    inner_val_weights = sample_weight[sample_weight.index.isin(prediction_df.index)]
-                else:
-                    inner_val_weights = None
-
-                if len(y_inner_validation) > 0:
-                    val_score = val_scorer(y_inner_validation, prediction_df['estimate'].values,
-                                           sample_weight=inner_val_weights)
-                    if val_score < 0:
-                        raise ValueError('Scorer must return values >= 0.')
-                    if mean_val_score is None:
-                        mean_val_score = val_score
+                # Remove nan predictions
+                prediction_df = prediction_df[prediction_df['estimate'].notna()]
+                if len(prediction_df) > 0:
+                    if sample_weight is not None:
+                        inner_val_weights = sample_weight[sample_weight.index.isin(prediction_df.index)]
                     else:
-                        mean_val_score += val_score
-                    succesful_split_counter += 1
+                        inner_val_weights = None
+                    y_inner_validation = y_inner_validation[y_inner_validation.index.isin(prediction_df.index)]
+                    if len(y_inner_validation) > 0:
+                        val_score = val_scorer(y_inner_validation, prediction_df['estimate'].values,
+                                               sample_weight=inner_val_weights)
+                        if val_score < 0:
+                            raise ValueError('Scorer must return values >= 0.')
+                        if mean_val_score is None:
+                            mean_val_score = val_score
+                        else:
+                            mean_val_score += val_score
+                        succesful_split_counter += 1
+                    else:
+                        raise Exception('Non nan predictions found, but no validation labels.')
+
+
             if mean_val_score is not None:
                 mean_val_score = mean_val_score / succesful_split_counter
-            if mean_val_score is not None:
                 if (best_score is None) or (greater_is_better and mean_val_score > best_score) or (
                         not greater_is_better and mean_val_score < best_score):
                     best_score = mean_val_score
                     best_hyperparams = hparams
             if succesful_split_counter == 0:
                 print(f'WARNING: no successful splits found for kappa: {kappa} and ratio: {ratio}')
+
+    if best_score is None:
+        raise Exception('No successful splits with non NaN predictions found for any kappa or ratio.')
     print(f'Best neighbour parameters: {best_hyperparams} with score: {best_score}')
     if best_hyperparams['ratio_max_branch_length'] == 0:
         print(

@@ -183,7 +183,8 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         assert result.loc['D', 'estimate'] == 1
         assert round(result.loc['E', 'estimate'],4) == 0.5346
 
-        nan_result = clf._get_data_with_predictions(['X', 'Y'], fill_in_unknowns_with_mean=False)
+        clf.fill_in_unknowns_with_mean = False
+        nan_result = clf._get_data_with_predictions(['X', 'Y'])
         self.assertTrue(np.isnan(nan_result.loc['X', 'estimate']))
         self.assertTrue(np.isnan(nan_result.loc['Y', 'estimate']))
 

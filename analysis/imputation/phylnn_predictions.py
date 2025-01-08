@@ -42,9 +42,9 @@ def predict(distance_csv: str, missing_values_csv: str, tag: str, continuous: bo
     hparams = get_gridsearch_best_hparams_for_phylnn(train, train[target_name],
                                                      distance_df,
                                                      clf=clf, cv=KFold(n_splits=5, shuffle=True, random_state=42), val_scorer=val_scorer,
-                                                     greater_is_better=greater_is_better)
+                                                     greater_is_better=greater_is_better, fill_in_unknowns_with_mean=False)
     pickle.dump(hparams, open(os.path.join(out_dir, 'phylnn_hparams.pkl'), 'wb'))
-    base_example = PhylNearestNeighbours(distance_df, clf=clf, ratio_max_branch_length=hparams['ratio_max_branch_length'], kappa=hparams['kappa'])
+    base_example = PhylNearestNeighbours(distance_df, clf=clf, ratio_max_branch_length=hparams['ratio_max_branch_length'], kappa=hparams['kappa'], fill_in_unknowns_with_mean=False)
     base_example.fit(train.index, train[target_name])
 
     test = missing_values_df[missing_values_df[target_name].isna()]
