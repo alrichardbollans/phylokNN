@@ -55,7 +55,12 @@ def predict(distance_csv: str, missing_values_csv: str, tag: str, continuous: bo
 
 
 def main():
-    predict(os.path.join(continuous_input_path, '1', 'tree_distances.csv'), os.path.join(continuous_input_path, '1', 'mcar_values.csv'), '1', True)
+    for tag in range(1, 11):
+        predict(os.path.join(continuous_input_path, str(tag), 'tree_distances.csv'), os.path.join(continuous_input_path, str(tag), 'mcar_values.csv'),
+                str(tag), True)
+
+        predict(os.path.join(binary_input_path, str(tag), 'tree_distances.csv'), os.path.join(binary_input_path, str(tag), 'mcar_values.csv'),
+                str(tag), False)
 
 
 if __name__ == '__main__':

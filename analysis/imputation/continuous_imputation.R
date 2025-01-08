@@ -1,15 +1,19 @@
 library(TDIP)
-tag='1'
-sim_path = file.path('simulations', 'continuous')
-mcar_values = read.csv(file.path(sim_path, tag, 'mcar_values.csv'), row.names = 1)
-simData = readRDS(file.path(sim_path, tag, 'simData.rds'))
+# tag='1'
 
-target_name = names(mcar_values)
-picont = pi_continuous_traits(mcar_values[target_name],simData$TreeList$`1`)
-outdata = picont$imputedData
-write.csv(outdata, file.path('..','imputation','predictions', 'continuous', tag, 'Rphylopars.csv'))
+for(i in 1:10){
+  tag = as.character(i)
+  sim_path = file.path('simulations', 'continuous')
+  mcar_values = read.csv(file.path(sim_path, tag, 'mcar_values.csv'), row.names = 1)
+  simData = readRDS(file.path(sim_path, tag, 'simData.rds'))
 
-write.csv(picont$parameters$model, file.path('..','imputation','predictions', 'continuous', tag, 'Rphylopars_hparams.csv'))
+  target_name = names(mcar_values)
+  picont = pi_continuous_traits(mcar_values[target_name],simData$TreeList$`1`)
+  outdata = picont$imputedData
+  write.csv(outdata, file.path('..','imputation','predictions', 'continuous', tag, 'Rphylopars.csv'))
+  
+  write.csv(picont$parameters$model, file.path('..','imputation','predictions', 'continuous', tag, 'Rphylopars_hparams.csv'))
+}
 
 
 # method = "pi_continuous_traits"

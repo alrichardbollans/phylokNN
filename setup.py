@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='PhylogeneticNN',
+    name='phylonn',
 
     packages=find_packages(),
 
