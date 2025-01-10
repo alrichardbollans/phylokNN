@@ -284,11 +284,9 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
     """
     relevant_species = list(set(X_train.index).intersection(set(distance_matrix.index)))
     distance_matrix_for_nested_cv = distance_matrix.loc[relevant_species, relevant_species]
-    if ratios is None:
-        ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
-    if kappas is None:
-        kappas = [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]
+    ratios = ratios or [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    kappas = kappas or [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]
 
     best_score = None
     best_hyperparams = None
@@ -303,9 +301,8 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                 'ratio_max_branch_length': ratio
             }
 
-            mean_val_score = None
+            scores = []
 
-            succesful_split_counter = 0
             for i, (train_index, val_index) in enumerate(splits):
 
                 X_inner_train, X_inner_validation = X_train.iloc[train_index], X_train.iloc[val_index]
@@ -325,7 +322,7 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                 pd.testing.assert_index_equal(prediction_df.index, y_inner_validation.index, check_names=False)
 
                 # Remove nan predictions
-                prediction_df = prediction_df[prediction_df['estimate'].notna()]
+                prediction_df = prediction_df.dropna(subset=["estimate"])
                 if len(prediction_df) > 0:
                     if sample_weight is not None:
                         inner_val_weights = sample_weight[sample_weight.index.isin(prediction_df.index)]
@@ -337,22 +334,17 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                                                sample_weight=inner_val_weights)
                         if val_score < 0:
                             raise ValueError('Scorer must return values >= 0.')
-                        if mean_val_score is None:
-                            mean_val_score = val_score
-                        else:
-                            mean_val_score += val_score
-                        succesful_split_counter += 1
+                        scores.append(val_score)
                     else:
                         raise Exception('Non nan predictions found, but no validation labels.')
 
-
-            if mean_val_score is not None:
-                mean_val_score = mean_val_score / succesful_split_counter
+            if len(scores) > 0:
+                mean_val_score = np.mean(scores)
                 if (best_score is None) or (greater_is_better and mean_val_score > best_score) or (
                         not greater_is_better and mean_val_score < best_score):
                     best_score = mean_val_score
                     best_hyperparams = hparams
-            if succesful_split_counter == 0:
+            else:
                 print(f'WARNING: no successful splits found for kappa: {kappa} and ratio: {ratio}')
 
     if best_score is None:
@@ -362,3 +354,32 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
         print(
             'WARNING: optimal ratio_max_branch_length is set to 0, this may indicate that the tree is not providing useful predictions and simply taking the mean value is better.')
     return best_hyperparams
+
+
+if __name__ == '__main__':
+    import cProfile
+    import pstats
+    from sklearn.metrics import mean_absolute_error
+    from sklearn.model_selection import KFold
+
+    distance_matrix = pd.DataFrame([[0, 1, 3, 2, 6],
+                                    [2, 2, 5, 7, 2],
+                                    [2, 4, 2, 1, 0.5],
+                                    [3, 5, 7, 2, 1],
+                                    [3, 1, 3, 2, 9]]
+                                   )
+    distance_matrix.columns = ['A', 'B', 'C', 'D', 'E']
+    distance_matrix.index = ['A', 'B', 'C', 'D', 'E']
+    target_df = pd.DataFrame({'target': [1, 0, 1, 1, 0]}, index=['A', 'B', 'C', 'D', 'E'])
+    cv = KFold(n_splits=2, shuffle=True, random_state=3)
+    val_scorer = mean_absolute_error
+
+    with cProfile.Profile() as pr:
+        best_hparams = get_gridsearch_best_hparams_for_phylnn(distance_matrix.loc[['A', 'B', 'C']],
+                                                              target_df.loc[['A', 'B', 'C']]['target'],
+                                                              distance_matrix, clf=True, cv=cv,
+                                                              val_scorer=val_scorer, greater_is_better=False)
+
+        stats = pstats.Stats(pr)
+        stats.sort_stats(pstats.SortKey.TIME)
+        stats.print_stats()
