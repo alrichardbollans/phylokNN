@@ -181,7 +181,7 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         assert result.shape == (2, 1)
         assert result.index.equals(pd.Index(['D', 'E']))
         assert result.loc['D', 'estimate'] == 1
-        assert round(result.loc['E', 'estimate'],4) == 0.5346
+        assert round(result.loc['E', 'estimate'], 4) == 0.5346
 
         clf.fill_in_unknowns_with_mean = False
         nan_result = clf._get_data_with_predictions(['X', 'Y'])

@@ -303,11 +303,9 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
     """
     relevant_species = list(set(X_train.index).intersection(set(distance_matrix.index)))
     distance_matrix_for_nested_cv = distance_matrix.loc[relevant_species, relevant_species]
-    if ratios is None:
-        ratios = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
-    if kappas is None:
-        kappas = [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]
+    ratios = ratios or [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+    kappas = kappas or [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]
 
     best_score = None
     best_hyperparams = None
@@ -322,9 +320,8 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                 'ratio_max_branch_length': ratio
             }
 
-            mean_val_score = None
+            scores = []
 
-            succesful_split_counter = 0
             for i, (train_index, val_index) in enumerate(splits):
 
                 X_inner_train, X_inner_validation = X_train.iloc[train_index], X_train.iloc[val_index]
@@ -344,7 +341,7 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                 pd.testing.assert_index_equal(prediction_df.index, y_inner_validation.index, check_names=False)
 
                 # Remove nan predictions
-                prediction_df = prediction_df[prediction_df['estimate'].notna()]
+                prediction_df = prediction_df.dropna(subset=["estimate"])
                 if len(prediction_df) > 0:
                     if sample_weight is not None:
                         inner_val_weights = sample_weight[sample_weight.index.isin(prediction_df.index)]
@@ -356,21 +353,17 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                                                sample_weight=inner_val_weights)
                         if val_score < 0:
                             raise ValueError('Scorer must return values >= 0.')
-                        if mean_val_score is None:
-                            mean_val_score = val_score
-                        else:
-                            mean_val_score += val_score
-                        succesful_split_counter += 1
+                        scores.append(val_score)
                     else:
                         raise Exception('Non nan predictions found, but no validation labels.')
 
-            if mean_val_score is not None:
-                mean_val_score = mean_val_score / succesful_split_counter
+            if len(scores) > 0:
+                mean_val_score = np.mean(scores)
                 if (best_score is None) or (greater_is_better and mean_val_score > best_score) or (
                         not greater_is_better and mean_val_score < best_score):
                     best_score = mean_val_score
                     best_hyperparams = hparams
-            if succesful_split_counter == 0:
+            else:
                 print(f'WARNING: no successful splits found for kappa: {kappa} and ratio: {ratio}')
 
     if best_score is None:
