@@ -4,11 +4,14 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.utils.multiclass import unique_labels
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, validate_data
+from numpy.typing import ArrayLike
+
+from phyloNN import get_first_column
 
 
-class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
-                            RegressorMixin):  # ClassifierMixin before RegressorMixin so sklearn thinks this is a classifier
+class PhylNearestNeighbours(ClassifierMixin,
+                            RegressorMixin, BaseEstimator):  # ClassifierMixin before RegressorMixin so sklearn thinks this is a classifier
     '''
     General idea
     # Given a phylogeny with traits to predict, convert to a distance matrix
@@ -88,6 +91,7 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
                                         kappa: float, max_distance: float, sample_weight=None, fill_in_unknowns_with_mean: bool = True):
         """
 
+        :param fill_in_unknowns_with_mean:
         :param dist_matrix: The distance matrix containing phylogenetic distances between plants.
         :param train_plants: The list of plants used for 'training' the model.
         :param plants_to_predict: The list of plants for which to predict the phylogenetic neighbors.
@@ -111,13 +115,13 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
         # Merge distances with trait value
         training_data = pd.merge(training_dist_matrix, training_target_df, left_index=True, right_index=True)
         if sample_weight is not None:
-            sample_weight.name = 'sample_weight'
+            sample_weight.name = 'sample_weight_'
             training_data = pd.merge(training_data, sample_weight, left_index=True, right_index=True)
         results = {}
         for sp in plants_to_predict:
             if sp in training_data.columns:
                 if sample_weight is not None:
-                    species_training_data = training_data[[sp, target_name, 'sample_weight']].copy()
+                    species_training_data = training_data[[sp, target_name, 'sample_weight_']].copy()
                 else:
                     species_training_data = training_data[[sp, target_name]].copy()
                 if len(problem_set) > 0:
@@ -136,7 +140,7 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
                     #         max_dist_df = relevant_df[relevant_df[sp] <= closest_dist]
                 if len(max_dist_df) > 0:
                     if sample_weight is not None:
-                        max_dist_df['inverse_distance'] = max_dist_df['sample_weight'] / (max_dist_df[sp] ** kappa)
+                        max_dist_df['inverse_distance'] = max_dist_df['sample_weight_'] / (max_dist_df[sp] ** kappa)
                     else:
                         max_dist_df['inverse_distance'] = 1 / (max_dist_df[sp] ** kappa)
 
@@ -146,8 +150,9 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
                 else:
                     if fill_in_unknowns_with_mean:
                         if sample_weight is not None:
-                            results[sp] = (species_training_data[target_name] * species_training_data['sample_weight']).sum() / species_training_data[
-                                'sample_weight'].sum()
+                            results[sp] = (species_training_data[target_name] * species_training_data['sample_weight_']).sum() / \
+                                          species_training_data[
+                                              'sample_weight_'].sum()
                         else:
                             results[sp] = species_training_data[target_name].mean()
                     else:
@@ -156,44 +161,48 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
 
         return out_df
 
-    def fit(self, X: pd.Series, y: pd.Series, sample_weight=None):
+    def fit(self, X: ArrayLike, y: ArrayLike, sample_weight=None):
         """
-        :param X: The input list of species names. A pandas Series of shape (n_samples,).
-        :param y: The target variable. A pandas Series of shape (n_samples,).
-        :param sample_weight: Optional. The sample weights. A pandas Series or numpy array of shape (n_samples,).
+        :param X: {array-like, sparse matrix} of shape (n_samples, n_features). The first column must be species names.
+        :param y: The target variable. An ArrayLike of shape (n_samples,).
+        :param sample_weight: Optional. The sample weights. array-like of shape (n_samples,) default=None
         :return: None
         """
-        self.target_name = '_unique_target_name__axmn'
+        X, y = validate_data(
+            self,
+            X,
+            y, skip_check_array=True)
+
+        self.target_name_ = '_unique_target_name__axmn'
 
         self.X_ = X
 
-        if isinstance(X, pd.Series):
-            self.train_plants_ = X.values.tolist()
-        else:
-            self.train_plants_ = list(X.copy())
-        if not isinstance(y, pd.Series):  # Gridsearch Fit changes y to a numpy array so this won't work in that case
-            y_series = pd.Series(y, index=self.train_plants_)
-        else:
+        self.train_plants_ = get_first_column(X)
+        if isinstance(y, pd.Series):
             y_series = y
+            assert self.train_plants_ == list(y_series.index)
+        else:
+            # Gridsearch Fit changes y to a numpy array so this won't work in that case
+            y_series = pd.Series(y, index=self.train_plants_)
 
         if self.clf:
             self.classes_ = unique_labels(y_series.unique().tolist())
-        assert self.train_plants_ == list(y_series.index)
-        self.labelled_training_data = y_series.to_frame(name=self.target_name)
+        self.labelled_training_data_ = y_series.to_frame(name=self.target_name_)
 
         assert len(X) == len(y)
         assert len(X) == len(y_series)
-        self.mean_activity = np.average(y_series, weights=sample_weight)
-        self.sample_weight = sample_weight
-        if sample_weight is not None:
-            pd.testing.assert_index_equal(self.labelled_training_data.index, self.sample_weight.index)
+        self.mean_activity_ = np.average(y_series, weights=sample_weight)
+        print(f'Mean activity: {self.mean_activity_}')
+        self.sample_weight_ = sample_weight
+        if isinstance(self.sample_weight_, pd.Series):
+            pd.testing.assert_index_equal(self.labelled_training_data_.index, self.sample_weight_.index)
 
-        self.train_distances = self.distance_matrix[self.distance_matrix.index.isin(self.labelled_training_data.index)]
+        self.train_distances_ = self.distance_matrix[self.distance_matrix.index.isin(self.labelled_training_data_.index)]
         # Do some integrity check of the dist_matrix and target_df
-        PhylNearestNeighbours.check_compatibility_of_matrix_and_data(self.distance_matrix, self.labelled_training_data)
+        PhylNearestNeighbours.check_compatibility_of_matrix_and_data(self.distance_matrix, self.labelled_training_data_)
 
         max_distance_for_entire_training_tree = max(self.distance_matrix.select_dtypes(include=[np.number]).max())
-        self.max_distance = max_distance_for_entire_training_tree * self.ratio_max_branch_length
+        self.max_distance_ = max_distance_for_entire_training_tree * self.ratio_max_branch_length
 
         return self
 
@@ -219,10 +228,10 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
         relevant_test_plants = plants_to_predict
         distances = self.distance_matrix[self.distance_matrix.index.isin(relevant_train_plants + relevant_test_plants)]
 
-        prediction_df = self.predict_phylogenetic_neighbours(distances, relevant_train_plants, relevant_test_plants, self.labelled_training_data,
-                                                             self.target_name, sample_weight=self.sample_weight,
+        prediction_df = self.predict_phylogenetic_neighbours(distances, relevant_train_plants, relevant_test_plants, self.labelled_training_data_,
+                                                             self.target_name_, sample_weight=self.sample_weight_,
                                                              kappa=self.kappa,
-                                                             max_distance=self.max_distance,
+                                                             max_distance=self.max_distance_,
                                                              fill_in_unknowns_with_mean=self.fill_in_unknowns_with_mean)
         X = pd.Series(plants_to_predict, name='index_names')
         data_with_predictions = pd.merge(X, prediction_df, left_on='index_names',
@@ -234,29 +243,39 @@ class PhylNearestNeighbours(BaseEstimator, ClassifierMixin,
         assert list(data_with_predictions.index) == plants_to_predict
         return data_with_predictions
 
-    def predict(self, X):
-        if isinstance(X, pd.DataFrame):
-            raise Exception('Dataframes shouldnt be passed to PhylNearestNeighbours.predict. This is not implemented (yet)')
-        data_with_predictions = self._get_data_with_predictions(X)
+    def predict(self, X: ArrayLike):
+        """
+        :param X: {array-like, sparse matrix} of shape (n_samples, n_features). The first column must be species names.
+        :return: ndarray of shape (n_samples,)
+        """
+        X = validate_data(self, X, reset=False, skip_check_array=True)
+        names = get_first_column(X)
+        data_with_predictions = self._get_data_with_predictions(names)
         if self.clf:
             threshold = .5
             data_with_predictions['state'] = data_with_predictions['estimate'].gt(threshold).astype(int)
-            return data_with_predictions['state'].values.astype(float)
+            y_pred = data_with_predictions['state'].values.astype(float)
         else:
-            return data_with_predictions['estimate'].values.astype(float)
+            y_pred = data_with_predictions['estimate'].values.astype(float)
+        return y_pred
 
-    def predict_proba(self, X):
-        if isinstance(X, pd.DataFrame):
-            raise Exception('Dataframes shouldnt be passed to PhylNearestNeighbours.predict_proba. This is not implemented (yet)')
-        data_with_predictions = self._get_data_with_predictions(X)
+    def predict_proba(self, X: ArrayLike):
+        """
+        :param X: {array-like, sparse matrix} of shape (n_samples, n_features). The first column must be species names.
+        :return: array-like of shape (n_samples, n_classes)
+        """
+        X = validate_data(self, X, reset=False, skip_check_array=True)
+        names = get_first_column(X)
+        data_with_predictions = self._get_data_with_predictions(names)
         data_with_predictions['0'] = 1 - data_with_predictions['estimate']
-        return np.column_stack((data_with_predictions['0'].values, data_with_predictions['estimate'].values)).astype(float)
+        T = np.column_stack((data_with_predictions['0'].values, data_with_predictions['estimate'].values)).astype(float)
+        return T
 
     def fill_in_mean_activities(self, prediction_df):
         # Assign mean values to unknown cases
         # This now happens in predict_phylogenetic_neighbours, but this may catch some edge cases.
         prediction_df['estimate'] = np.where(
-            prediction_df['estimate'].isna(), self.mean_activity,
+            prediction_df['estimate'].isna(), self.mean_activity_,
             prediction_df['estimate'])
 
 
@@ -344,7 +363,6 @@ def get_gridsearch_best_hparams_for_phylnn(X_train: pd.DataFrame, y_train: pd.Se
                         succesful_split_counter += 1
                     else:
                         raise Exception('Non nan predictions found, but no validation labels.')
-
 
             if mean_val_score is not None:
                 mean_val_score = mean_val_score / succesful_split_counter

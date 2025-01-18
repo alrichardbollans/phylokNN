@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, make_scorer
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.utils.estimator_checks import check_estimator
 
@@ -129,7 +129,7 @@ class TestPhylNearestNeighbours(unittest.TestCase):
                                            )
         cls.distance_matrix.columns = ['A', 'B', 'C', 'D', 'E']
         cls.distance_matrix.index = ['A', 'B', 'C', 'D', 'E']
-        cls.target_df = pd.DataFrame({'target': [1, 0, 1, 1, 0]}, index=['A', 'B', 'C', 'D', 'E'])
+        cls.target_df = pd.DataFrame({'name': ['A', 'B', 'C', 'D', 'E'],'target': [1, 0, 1, 1, 0]}, index=['A', 'B', 'C', 'D', 'E'])
         cls.clf = PhylNearestNeighbours(cls.distance_matrix, clf=True, ratio_max_branch_length=0.6, kappa=0.1)
 
     def test_init(self):
@@ -152,31 +152,31 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         self.assertTrue(isinstance(result, pd.DataFrame), "Should return Pandas DataFrame")
 
     def test_fit(self):
-        X = ['A', 'B', 'C']
+        X = [['A'], ['B'], ['C']]
         y = self.target_df.loc[['A', 'B', 'C']]['target']
         clf = self.clf.fit(X, y)
         self.assertTrue(hasattr(clf, 'train_plants_'), 'Model is not fitted correctly')
         self.assertTrue(hasattr(clf, 'X_'), 'Model is not fitted correctly')
-        self.assertTrue(hasattr(clf, 'target_name'), 'Model is not fitted correctly')
+        self.assertTrue(hasattr(clf, 'target_name_'), 'Model is not fitted correctly')
         self.assertTrue(hasattr(clf, 'classes_'), 'Model is not fitted correctly')
-        self.assertTrue(hasattr(clf, 'labelled_training_data'), 'Model is not fitted correctly')
-        self.assertTrue(hasattr(clf, 'mean_activity'), 'Model is not fitted correctly')
-        self.assertTrue(hasattr(clf, 'sample_weight'), 'Model is not fitted correctly')
-        self.assertTrue(hasattr(clf, 'train_distances'), 'Model is not fitted correctly')
-        self.assertTrue(hasattr(clf, 'max_distance'), 'Model is not fitted correctly')
+        self.assertTrue(hasattr(clf, 'labelled_training_data_'), 'Model is not fitted correctly')
+        self.assertTrue(hasattr(clf, 'mean_activity_'), 'Model is not fitted correctly')
+        self.assertTrue(hasattr(clf, 'sample_weight_'), 'Model is not fitted correctly')
+        self.assertTrue(hasattr(clf, 'train_distances_'), 'Model is not fitted correctly')
+        self.assertTrue(hasattr(clf, 'max_distance_'), 'Model is not fitted correctly')
 
     def test_predict(self):
         X = self.distance_matrix.loc[['D', 'E']]
         y = self.target_df.loc[['D', 'E']]['target']
         clf = self.clf
-        clf.fit(pd.Series(['A', 'B', 'C']), self.target_df.loc[['A', 'B', 'C']]['target'])
-        predictions = clf.predict(['D', 'E'])
+        clf.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
+        predictions = clf.predict([['D', 9], ['E',11]])
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict method should return Pandas Series.')
         self.assertTrue(np.array_equal(predictions, [1, 1]), True)
 
     def test__get_data_with_predictions(self):
         clf = self.clf
-        clf.fit(self.distance_matrix.loc[['A', 'B', 'C']].index, self.target_df.loc[['A', 'B', 'C']]['target'])
+        clf.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
         result = clf._get_data_with_predictions(self.distance_matrix.loc[['D', 'E']].index)
         assert result.shape == (2, 1)
         assert result.index.equals(pd.Index(['D', 'E']))
@@ -192,13 +192,13 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         X = self.distance_matrix.loc[['D', 'E']]
         y = self.target_df.loc[['D', 'E']]['target']
         clf = self.clf
-        clf.fit(pd.Series(['A', 'B', 'C']), self.target_df.loc[['A', 'B', 'C']]['target'])
-        predictions = clf.predict_proba(['D', 'E'])[:, 1]
+        clf.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
+        predictions = clf.predict_proba([['D', 9], ['E', 9]])[:, 1]
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(predictions, [1, 0.5346], decimal=4)
 
     def test_fill_in_mean_activities(self):
-        X = ['A', 'B', 'C', 'D', 'E']
+        X = [['A'], ['B'], ['C'], ['D'], ['E']]
         y = self.target_df['target']
         df = pd.DataFrame({'estimate': [1, np.nan, 3, 4]})
         clf = self.clf
@@ -212,17 +212,17 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         X = self.distance_matrix.loc[['D', 'E']]
         y = self.target_df.loc[['D', 'E']]['target']
         clf = self.clf
-        clf.fit(['A', 'B', 'C'], self.target_df.loc[['A', 'B', 'C']]['target'], sample_weight=weights)
-        predictions = clf.predict(pd.Series(['D', 'E']))
+        clf.fit([['A'], ['B'], ['C']], self.target_df.loc[['A', 'B', 'C']]['target'], sample_weight=weights)
+        predictions = clf.predict([['D'], ['E']])
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict method should return Pandas Series.')
         self.assertTrue(np.array_equal(predictions, [1, 1]), True)
 
-        predictions = clf.predict_proba(['D', 'E'])[:, 1]
+        predictions = clf.predict_proba([['D'], ['E']])[:, 1]
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(predictions, [1, 0.7751], decimal=4)
 
     def test_sklearn_checks(self):
-        check_estimator(self.clf)
+        check_estimator(self.clf)#, on_fail='warn')
 
 
 class testgridsearch(unittest.TestCase):
@@ -275,23 +275,27 @@ class testgridsearch(unittest.TestCase):
         np.testing.assert_array_almost_equal(predictions, [1, 0.7892], decimal=4)
 
     def test_try_proper_gridsearch(self):
-        phyln = PhylNearestNeighbours(self.distance_matrix, True, 0, 0)
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 0, 0, fill_in_unknowns_with_mean=False)
+        mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+        cv = KFold(n_splits=2, shuffle=True, random_state=3)
         gs = GridSearchCV(
             estimator=phyln,
-            param_grid={'ratio_max_branch_length': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
-                        'kappa': [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3, 4]},
-            cv=KFold(n_splits=2, shuffle=True, random_state=1),
+            param_grid={'ratio_max_branch_length': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+                        'kappa': [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]},
+            cv=cv,
             n_jobs=1,
-            scoring=mean_absolute_error,
+            scoring=mae_scorer,
             verbose=1,
             error_score='raise',
             refit=True
         )
 
-        fitted_gs = gs.fit(['A', 'B', 'C'], self.target_df.loc[['A', 'B', 'C']]['target'].values)
-
-        print(self.name)
+        fitted_gs = gs.fit([['A'], ['B'], ['C']], [1, 0, 1])
         print(fitted_gs.best_params_)
+        print(fitted_gs.fill_in_unknowns_with_mean)
+        predictions = fitted_gs.predict_proba([['D'], ['E']])[:, 1]
+        self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
+        np.testing.assert_array_almost_equal(predictions, [1, 0.6716], decimal=4)
 
 
 if __name__ == '__main__':
