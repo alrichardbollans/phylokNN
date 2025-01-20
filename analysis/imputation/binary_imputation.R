@@ -14,7 +14,7 @@ for(i in 1:10){
   pidisc = pi_categorical_traits(mcar_values[target_name],simData$TreeList$`1`)
   
   
-  outdata = pidisc$imputedData
+  outdata = pidisc$probabilities
   write.csv(outdata, file.path('..','imputation','predictions', 'binary', tag, 'corHMM.csv'))
   write.csv(pidisc$parameters, file.path('..','imputation','predictions', 'binary', tag, 'corHMM_hparams.csv'))
 

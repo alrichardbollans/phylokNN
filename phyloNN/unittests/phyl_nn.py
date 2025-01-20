@@ -3,11 +3,11 @@ import unittest
 import numpy as np
 import pandas as pd
 import sklearn
-from sklearn.metrics import mean_absolute_error, make_scorer
+from sklearn.metrics import mean_absolute_error, make_scorer, brier_score_loss
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.utils.estimator_checks import check_estimator
 
-from phyloNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn
+from phyloNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn, gridsearch, bayes_opt
 
 
 class Testpredict_phylogenetic_neighbours_with_all_neighbours(unittest.TestCase):
@@ -253,6 +253,7 @@ class TestPhylNearestNeighbours(unittest.TestCase):
             refit=True
         )
         self.assertRaises(ValueError, gs.fit, [['A'], ['B'], ['C']], [1, 0, 1])
+
     def test_raises_correct_errors(self):
         phyln = PhylNearestNeighbours(self.distance_matrix, False, 0, 0, fill_in_unknowns_with_mean=False)
         mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
@@ -367,7 +368,7 @@ class testgridsearch(unittest.TestCase):
         weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
 
         # This is how to do gridsearch -- set fill in means to off with error_score = np.nan and then fit a new model.
-        phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=False)
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=True)
         mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
         gs = GridSearchCV(
@@ -384,8 +385,9 @@ class testgridsearch(unittest.TestCase):
 
         fitted_gs = gs.fit([['A'], ['B'], ['C']], [1, 0, 1], sample_weight=weights)
         print(fitted_gs.best_params_)
-        if fitted_gs.best_params_['ratio_max_branch_length'] ==0:
-            print(f'WARNING: Max distance set to 0, meaning NaNs/mean values will be predicted for all inputs (barring polytomies).')
+        if fitted_gs.best_params_['ratio_max_branch_length'] == 0:
+            print(
+                f'WARNING: Max distance set to 0, this means unweighted means performed best in gridsearch and that NaNs/mean values will be predicted for all inputs (barring polytomies).')
         best_phyln = PhylNearestNeighbours(self.distance_matrix, True, fitted_gs.best_params_['ratio_max_branch_length'],
                                            fitted_gs.best_params_['kappa'], fill_in_unknowns_with_mean=True)
         best_phyln.fit([['A'], ['B'], ['C']], [1, 0, 1], sample_weight=weights)
@@ -393,6 +395,16 @@ class testgridsearch(unittest.TestCase):
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(predictions, [1, 0.7751], decimal=4)
 
+        ## my gs example
+
+        gs = gridsearch(self.distance_matrix, clf=True, scorer=mae_scorer, cv=cv, X=[['A'], ['B'], ['C']], y=[1, 0, 1], weights=weights)
+        gs_predictions = gs.predict_proba([['D'], ['E']])[:, 1]
+        self.assertTrue(isinstance(gs_predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
+        np.testing.assert_array_almost_equal(gs_predictions, [1, 0.7751], decimal=4)
+
+    def test_bayes(self):
+        _scorer = make_scorer(brier_score_loss, greater_is_better=False)
+        optimized = bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),X=[['A'], ['B'], ['C']], y=[1, 0, 1])
 
 if __name__ == '__main__':
     unittest.main()

@@ -7,6 +7,8 @@
 # install.packages("faux_1.2.1.tar.gz", repos = NULL, type = "source")
 # remotes::install_version("geiger", version = "2.0.10") # see https://github.com/Matgend/TDIP/issues/1
 # devtools::install_github("Matgend/TDIP")
+
+# Gendre Matthieu. 2022. TDIP: Trait Data Imputation with Phylogeny.
 library(TDIP)
 # save distances, traits and trees to simulation folder, for phylonn to use
 
