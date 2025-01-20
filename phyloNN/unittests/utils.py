@@ -2,11 +2,8 @@ import unittest
 
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_absolute_error
-from sklearn.model_selection import KFold, GridSearchCV
-from sklearn.utils.estimator_checks import check_estimator
 
-from phyloNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn, get_first_column
+from phyloNN import get_first_column
 
 
 class test_arrays(unittest.TestCase):

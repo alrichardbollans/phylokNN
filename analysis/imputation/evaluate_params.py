@@ -26,8 +26,9 @@ def evaluate_model_params(continuous:bool=True):
         tag = str(t)
         lamba = pd.read_csv(os.path.join(in_path, tag, 'dataframe_params.csv'))['lambda'].iloc[0]
         kappa = pd.read_csv(os.path.join(in_path, tag, 'dataframe_params.csv'))['kappa'].iloc[0]
-        ratio = pickle.load(open(os.path.join(out_path, tag, 'phylnn_hparams.pkl'), 'rb'))['ratio_max_branch_length']
-        model_kappa = pickle.load(open(os.path.join(out_path, tag, 'phylnn_hparams.pkl'), 'rb'))['kappa']
+        fitted_gridsearch = pickle.load(open(os.path.join(out_path, tag, 'phylnn_hparams.pkl'), 'rb'))
+        ratio = fitted_gridsearch.best_params_['ratio_max_branch_length']
+        model_kappa = fitted_gridsearch.best_params_['kappa']
         lambdas.append(lamba)
         gt_kappas.append(kappa)
         ratio_max_dists.append(ratio)
@@ -57,15 +58,17 @@ def evaluate_model_params(continuous:bool=True):
     plt.close()
 
     ax = sns.scatterplot(x=lambdas, y=phylnn_scores)
-    ax.set_xlabel("Ground truth lambda'")
+    ax.set_xlabel("Ground truth lambda")
     ax.set_ylabel("PhyloNN loss")
     plt.savefig(os.path.join(plot_path, 'lambda_score_plot.jpg'), dpi=300)
     plt.close()
 
 
 def summarise_model_params(tags):
+    # plto distributions etc.
     pass
 
 
 if __name__ == '__main__':
     evaluate_model_params()
+    evaluate_model_params(False)

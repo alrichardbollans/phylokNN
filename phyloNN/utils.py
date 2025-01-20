@@ -27,5 +27,5 @@ def get_first_column(array_like):
     else:
 
         raise TypeError("Unsupported array-like object. Provide a nested list, NumPy array, or pandas DataFrame.")
-    # assert all(isinstance(item, str) for item in out)
+    assert all(isinstance(item, str) for item in out)
     return out

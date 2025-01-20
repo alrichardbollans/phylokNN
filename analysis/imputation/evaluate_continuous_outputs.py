@@ -2,8 +2,10 @@ import os.path
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from scipy.stats import ttest_rel
 from sklearn.metrics import mean_absolute_error
+import seaborn as sns
 
 from analysis.imputation.phylnn_predictions import continuous_output_path, continuous_input_path
 
@@ -11,7 +13,7 @@ from analysis.imputation.phylnn_predictions import continuous_output_path, conti
 def evaluate_continuous_output(tag):
     ground_truth = pd.read_csv(os.path.join(continuous_input_path, tag, 'simData_FinalData.csv'), index_col=0)
     missing_values = pd.read_csv(os.path.join(continuous_input_path, tag, 'mcar_values.csv'), index_col=0)
-    my_predictions = pd.read_csv(os.path.join(continuous_output_path, tag, 'phylnn.csv'), index_col=0)[['1']]
+    my_predictions = pd.read_csv(os.path.join(continuous_output_path, tag, 'phylnn.csv'), index_col=0)[['0']]
     my_predictions.columns = ['PhyloNN']
     Rphylopars_predictions = pd.read_csv(os.path.join(continuous_output_path, tag, 'Rphylopars.csv'), index_col=0)
     Rphylopars_predictions.columns = ['Rphylopars']
@@ -75,6 +77,10 @@ def collate():
 
     # Save to CSV
     df.to_csv(os.path.join('evaluation', 'continuous', "ttest_results.csv"), index=False)
+
+    plot_df = pd.DataFrame({'PhyloNN': phylnn_scores, 'Rphylopars': phylopars_scores})
+    sns.violinplot(data=plot_df,fill=False)
+    plt.savefig(os.path.join('evaluation', 'continuous', 'violin_plot.jpg'), dpi=300)
 
 
 if __name__ == '__main__':

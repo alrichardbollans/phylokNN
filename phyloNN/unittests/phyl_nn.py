@@ -2,6 +2,7 @@ import unittest
 
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.metrics import mean_absolute_error, make_scorer
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.utils.estimator_checks import check_estimator
@@ -129,8 +130,9 @@ class TestPhylNearestNeighbours(unittest.TestCase):
                                            )
         cls.distance_matrix.columns = ['A', 'B', 'C', 'D', 'E']
         cls.distance_matrix.index = ['A', 'B', 'C', 'D', 'E']
-        cls.target_df = pd.DataFrame({'name': ['A', 'B', 'C', 'D', 'E'],'target': [1, 0, 1, 1, 0]}, index=['A', 'B', 'C', 'D', 'E'])
+        cls.target_df = pd.DataFrame({'name': ['A', 'B', 'C', 'D', 'E'], 'target': [1, 0, 1, 1, 0]}, index=['A', 'B', 'C', 'D', 'E'])
         cls.clf = PhylNearestNeighbours(cls.distance_matrix, clf=True, ratio_max_branch_length=0.6, kappa=0.1)
+        cls.reg = PhylNearestNeighbours(cls.distance_matrix, clf=False, ratio_max_branch_length=0.6, kappa=0.1)
 
     def test_init(self):
         pd.testing.assert_frame_equal(self.clf.distance_matrix, self.distance_matrix)
@@ -170,7 +172,7 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         y = self.target_df.loc[['D', 'E']]['target']
         clf = self.clf
         clf.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
-        predictions = clf.predict([['D', 9], ['E',11]])
+        predictions = clf.predict([['D', 9], ['E', 11]])
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict method should return Pandas Series.')
         self.assertTrue(np.array_equal(predictions, [1, 1]), True)
 
@@ -197,6 +199,9 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(predictions, [1, 0.5346], decimal=4)
 
+        self.reg.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
+        self.assertRaises(ValueError, self.reg.predict_proba, [['D', 9], ['E', 9]])
+
     def test_fill_in_mean_activities(self):
         X = [['A'], ['B'], ['C'], ['D'], ['E']]
         y = self.target_df['target']
@@ -221,8 +226,64 @@ class TestPhylNearestNeighbours(unittest.TestCase):
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(predictions, [1, 0.7751], decimal=4)
 
+    def test_predictions_with_nans(self):
+        # When ratio max dist is 0, should get nan predictions if fill_in_unknowns_with_mean=False
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 0, 0, fill_in_unknowns_with_mean=False)
+        self.assertRaises(sklearn.exceptions.NotFittedError, phyln.predict, [['D', 9], ['E', 9]])
+
+        phyln.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
+        x = phyln.predict([['D', 9], ['E', 9]])
+        np.testing.assert_array_equal(x, [np.nan, np.nan])
+
+        x = phyln.predict([['D', 9], ['A', 9]])
+        np.testing.assert_array_equal(x, [np.nan, np.nan])
+
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 0, 0, fill_in_unknowns_with_mean=False)
+        mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+        cv = KFold(n_splits=2, shuffle=True, random_state=3)
+        gs = GridSearchCV(
+            estimator=phyln,
+            param_grid={'ratio_max_branch_length': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+                        'kappa': [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]},
+            cv=cv,
+            n_jobs=1,
+            scoring=mae_scorer,
+            verbose=1,
+            error_score='raise',
+            refit=True
+        )
+        self.assertRaises(ValueError, gs.fit, [['A'], ['B'], ['C']], [1, 0, 1])
+    def test_raises_correct_errors(self):
+        phyln = PhylNearestNeighbours(self.distance_matrix, False, 0, 0, fill_in_unknowns_with_mean=False)
+        mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+        cv = KFold(n_splits=2, shuffle=True, random_state=3)
+        gs = GridSearchCV(
+            estimator=phyln,
+            param_grid={'ratio_max_branch_length': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+                        'kappa': [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]},
+            cv=cv,
+            n_jobs=1,
+            scoring=mae_scorer,
+            verbose=1,
+            error_score='raise',
+            refit=True
+        )
+        # Should raise a Value error because of the 0 ratio means nans are predicted when scoring
+        self.assertRaises(ValueError, gs.fit, [['A'], ['B'], ['C']], [1, 0, 1])
+
+        phyln.fit(self.target_df.loc[['A', 'B', 'C']], self.target_df.loc[['A', 'B', 'C']]['target'])
+
+        x = phyln.predict([['D', 9], ['E', 9]])
+        np.testing.assert_array_equal(x, [np.nan, np.nan])
+
+        x = phyln.predict([['D', 9], ['A', 9]])
+        np.testing.assert_array_equal(x, [np.nan, np.nan])
+
     def test_sklearn_checks(self):
-        check_estimator(self.clf)#, on_fail='warn')
+        check_estimator(self.clf, on_fail='warn')
+
+        # This will fail becasue we force first column to be string names
+        check_estimator(self.clf)  # , on_fail='warn')
 
 
 class testgridsearch(unittest.TestCase):
@@ -241,6 +302,7 @@ class testgridsearch(unittest.TestCase):
         cls.distance_matrix.index = ['A', 'B', 'C', 'D', 'E']
         cls.target_df = pd.DataFrame({'target': [1, 0, 1, 1, 0]}, index=['A', 'B', 'C', 'D', 'E'])
 
+    @unittest.skip('No longer used')
     def test_get_gridsearch_best_hparams_for_phylnn(self):
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
         val_scorer = mean_absolute_error
@@ -257,6 +319,7 @@ class testgridsearch(unittest.TestCase):
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(predictions, [1, 0.6716], decimal=4)
 
+    @unittest.skip('No longer used')
     def test_get_gridsearch_best_hparams_for_phylnn_with_SW(self):
         weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
@@ -275,27 +338,60 @@ class testgridsearch(unittest.TestCase):
         np.testing.assert_array_almost_equal(predictions, [1, 0.7892], decimal=4)
 
     def test_try_proper_gridsearch(self):
-        phyln = PhylNearestNeighbours(self.distance_matrix, True, 0, 0, fill_in_unknowns_with_mean=False)
+        # This is how to do gridsearch -- set fill in means to off with error_score = np.nan and then fit a new model.
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=False)
         mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
         gs = GridSearchCV(
             estimator=phyln,
-            param_grid={'ratio_max_branch_length': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+            param_grid={'ratio_max_branch_length': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
                         'kappa': [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]},
             cv=cv,
             n_jobs=1,
             scoring=mae_scorer,
             verbose=1,
-            error_score='raise',
-            refit=True
+            error_score=np.nan,
+            refit=False
         )
 
         fitted_gs = gs.fit([['A'], ['B'], ['C']], [1, 0, 1])
         print(fitted_gs.best_params_)
-        print(fitted_gs.fill_in_unknowns_with_mean)
-        predictions = fitted_gs.predict_proba([['D'], ['E']])[:, 1]
+        best_phyln = PhylNearestNeighbours(self.distance_matrix, True, fitted_gs.best_params_['ratio_max_branch_length'],
+                                           fitted_gs.best_params_['kappa'], fill_in_unknowns_with_mean=True)
+        best_phyln.fit([['A'], ['B'], ['C']], [1, 0, 1])
+        predictions = best_phyln.predict_proba([['D'], ['E']])[:, 1]
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
-        np.testing.assert_array_almost_equal(predictions, [1, 0.6716], decimal=4)
+        np.testing.assert_array_almost_equal(predictions, [1, 0.5346], decimal=4)
+
+    def test_try_proper_gridsearch_with_SW(self):
+        weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
+
+        # This is how to do gridsearch -- set fill in means to off with error_score = np.nan and then fit a new model.
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=False)
+        mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+        cv = KFold(n_splits=2, shuffle=True, random_state=3)
+        gs = GridSearchCV(
+            estimator=phyln,
+            param_grid={'ratio_max_branch_length': [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9],
+                        'kappa': [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]},
+            cv=cv,
+            n_jobs=1,
+            scoring=mae_scorer,
+            verbose=1,
+            error_score=np.nan,
+            refit=False
+        )
+
+        fitted_gs = gs.fit([['A'], ['B'], ['C']], [1, 0, 1], sample_weight=weights)
+        print(fitted_gs.best_params_)
+        if fitted_gs.best_params_['ratio_max_branch_length'] ==0:
+            print(f'WARNING: Max distance set to 0, meaning NaNs/mean values will be predicted for all inputs (barring polytomies).')
+        best_phyln = PhylNearestNeighbours(self.distance_matrix, True, fitted_gs.best_params_['ratio_max_branch_length'],
+                                           fitted_gs.best_params_['kappa'], fill_in_unknowns_with_mean=True)
+        best_phyln.fit([['A'], ['B'], ['C']], [1, 0, 1], sample_weight=weights)
+        predictions = best_phyln.predict_proba([['D'], ['E']])[:, 1]
+        self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
+        np.testing.assert_array_almost_equal(predictions, [1, 0.7751], decimal=4)
 
 
 if __name__ == '__main__':

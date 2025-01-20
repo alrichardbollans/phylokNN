@@ -3,6 +3,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
+from sklearn.utils import get_tags
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted, validate_data
 from numpy.typing import ArrayLike
@@ -10,8 +11,7 @@ from numpy.typing import ArrayLike
 from phyloNN import get_first_column
 
 
-class PhylNearestNeighbours(ClassifierMixin,
-                            RegressorMixin, BaseEstimator):  # ClassifierMixin before RegressorMixin so sklearn thinks this is a classifier
+class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorMixin so sklearn thinks this is a classifier
     '''
     General idea
     # Given a phylogeny with traits to predict, convert to a distance matrix
@@ -41,7 +41,6 @@ class PhylNearestNeighbours(ClassifierMixin,
 
         self.distance_matrix = distance_matrix  # .copy(deep=False) # Making a shallow copy to reduce RAM with multiple instances, but breaks when cloning class.
         self.clf = clf
-
         self.ratio_max_branch_length = ratio_max_branch_length
 
         self.kappa = kappa
@@ -192,7 +191,7 @@ class PhylNearestNeighbours(ClassifierMixin,
         assert len(X) == len(y)
         assert len(X) == len(y_series)
         self.mean_activity_ = np.average(y_series, weights=sample_weight)
-        print(f'Mean activity: {self.mean_activity_}')
+        # print(f'Mean activity: {self.mean_activity_}')
         self.sample_weight_ = sample_weight
         if isinstance(self.sample_weight_, pd.Series):
             pd.testing.assert_index_equal(self.labelled_training_data_.index, self.sample_weight_.index)
@@ -253,7 +252,9 @@ class PhylNearestNeighbours(ClassifierMixin,
         data_with_predictions = self._get_data_with_predictions(names)
         if self.clf:
             threshold = .5
-            data_with_predictions['state'] = data_with_predictions['estimate'].gt(threshold).astype(int)
+            data_with_predictions['state'] = np.where(
+                data_with_predictions['estimate'].isna(), np.nan,
+                data_with_predictions['estimate'].gt(threshold).astype(int))
             y_pred = data_with_predictions['state'].values.astype(float)
         else:
             y_pred = data_with_predictions['estimate'].values.astype(float)
@@ -264,6 +265,10 @@ class PhylNearestNeighbours(ClassifierMixin,
         :param X: {array-like, sparse matrix} of shape (n_samples, n_features). The first column must be species names.
         :return: array-like of shape (n_samples, n_classes)
         """
+        if not self.clf:
+            raise ValueError(
+                f"This PhylNearestNeighbours instance is set with clf=False. Only classifiers should use predict_proba. Use predict() instead."
+            )
         X = validate_data(self, X, reset=False, skip_check_array=True)
         names = get_first_column(X)
         data_with_predictions = self._get_data_with_predictions(names)
