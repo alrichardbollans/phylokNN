@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GridSearchCV, cross_val_score
 
-from phyloNN import PhylNearestNeighbours
+from phyloKNN import PhylNearestNeighbours
 
 
 def gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None,
                ratios: list = None, kappas: list = None, njobs=-1):
     '''
-    A utility functin showing how best to use gridsearch with phyloNN.
+    A utility functin showing how best to use gridsearch with phyloKNN.
     :param distance_matrix:
     :param clf:
     :param scorer:
@@ -50,7 +50,7 @@ def gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weigh
 
 def bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None, njobs=1, verbose=2):
     '''
-    Example of how to use bayesian optimisation with phyloNN.
+    Example of how to use bayesian optimisation with phyloKNN.
     :param distance_matrix:
     :param clf:
     :param scorer:

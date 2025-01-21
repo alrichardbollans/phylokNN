@@ -7,11 +7,11 @@ import pandas as pd
 from sklearn.metrics import mean_absolute_error, brier_score_loss, make_scorer
 from sklearn.model_selection import KFold, GridSearchCV
 
-from phyloNN import bayes_opt
-from phyloNN.phylogenetic_neighbours_model import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn
+from phyloKNN import bayes_opt
+from phyloKNN.phylogenetic_neighbours_model import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn
 
 repo_path = os.environ.get('KEWSCRATCHPATH')
-data_path = os.path.join(repo_path, 'PhyloNN', 'analysis', 'data')
+data_path = os.path.join(repo_path, 'PhylogeneticNN', 'analysis', 'data')
 simulations_path = os.path.join(data_path, 'simulations')
 continuous_input_path = os.path.join(simulations_path, 'continuous')
 binary_input_path = os.path.join(simulations_path, 'binary')

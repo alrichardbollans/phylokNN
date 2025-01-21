@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='phyloNN',
+    name='phyloKNN',
     description='A package for phylogenetic nearest neighbour analysis',
     author='Adam Richard-Bollans',
-    url='https://github.com/alrichardbollans/PhyloNN',
+    url='https://github.com/alrichardbollans/phyloKNN',
     license='Attribution-NonCommercial-ShareAlike 4.0 International',
-    packages=find_packages(include=['phyloNN']),
+    packages=find_packages(include=['phyloKNN']),
 
     install_requires=[
         "pandas",

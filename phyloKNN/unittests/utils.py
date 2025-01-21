@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from phyloNN import get_first_column
+from phyloKNN import get_first_column
 
 
 class test_arrays(unittest.TestCase):

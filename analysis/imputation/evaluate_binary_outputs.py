@@ -14,7 +14,7 @@ def evaluate_bin_output(tag):
     ground_truth = pd.read_csv(os.path.join(binary_input_path, tag, 'simData_FinalData.csv'), index_col=0)
     missing_values = pd.read_csv(os.path.join(binary_input_path, tag, 'mcar_values.csv'), index_col=0)
     my_predictions = pd.read_csv(os.path.join(binary_output_path, tag, 'phylnn.csv'), index_col=0)[['1']]
-    my_predictions.columns = ['PhyloNN']
+    my_predictions.columns = ['phyloKNN']
     RcorHMM_predictions = pd.read_csv(os.path.join(binary_output_path, tag, 'corHMM.csv'), index_col=0)[['V2']]
     RcorHMM_predictions.columns = ['corHMM']
 
@@ -25,17 +25,17 @@ def evaluate_bin_output(tag):
     full_df = pd.merge(test_ground_truths, my_predictions, left_index=True, right_index=True)
     full_df = pd.merge(full_df, RcorHMM_predictions, left_index=True, right_index=True)
 
-    nans_from_mine = full_df[full_df['PhyloNN'].isna()]
+    nans_from_mine = full_df[full_df['phyloKNN'].isna()]
     if len(nans_from_mine) > 0:
         print(f'Warning: dropping {len(nans_from_mine)} nans from analysis.')
-        full_df = full_df.dropna(subset=['PhyloNN'])
+        full_df = full_df.dropna(subset=['phyloKNN'])
 
     if len(full_df) == 0:
         print(f'Warning: no data left for tag:{tag}')
         return None, None
     else:
         corHMM_score = brier_score_loss(full_df[gt_target_name], full_df['corHMM'])
-        phylnn_score = brier_score_loss(full_df[gt_target_name], full_df['PhyloNN'])
+        phylnn_score = brier_score_loss(full_df[gt_target_name], full_df['phyloKNN'])
         return phylnn_score, corHMM_score
 
 
@@ -85,7 +85,7 @@ def collate():
     # Save to CSV
     df.to_csv(os.path.join('evaluation', 'binary', "ttest_results.csv"), index=False)
 
-    plot_df = pd.DataFrame({'PhyloNN': phylnn_scores, 'Rphylopars': corHMM_scores})
+    plot_df = pd.DataFrame({'phyloKNN': phylnn_scores, 'Rphylopars': corHMM_scores})
     sns.violinplot(data=plot_df, fill=False)
     plt.savefig(os.path.join('evaluation', 'binary', 'violin_plot.jpg'), dpi=300)
 

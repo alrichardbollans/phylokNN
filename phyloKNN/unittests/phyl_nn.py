@@ -7,7 +7,7 @@ from sklearn.metrics import mean_absolute_error, make_scorer, brier_score_loss
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.utils.estimator_checks import check_estimator
 
-from phyloNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn, gridsearch, bayes_opt
+from phyloKNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn, gridsearch, bayes_opt
 
 
 class Testpredict_phylogenetic_neighbours_with_all_neighbours(unittest.TestCase):

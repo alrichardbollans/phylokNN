@@ -8,7 +8,7 @@ from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted, validate_data
 from numpy.typing import ArrayLike
 
-from phyloNN import get_first_column
+from phyloKNN import get_first_column
 
 
 class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorMixin so sklearn thinks this is a classifier
