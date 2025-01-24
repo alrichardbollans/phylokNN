@@ -5,13 +5,13 @@ from sklearn.model_selection import GridSearchCV, cross_val_score
 
 sklearn.set_config(enable_metadata_routing=True)
 
-from phyloNN import PhylNearestNeighbours
+from phyloKNN import PhylNearestNeighbours
 
 
 def phyloNN_gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None,
                        ratios: list = None, kappas: list = None, njobs=-1):
     '''
-    A utility functin showing how best to use gridsearch with phyloNN.
+    A utility functin showing how best to use gridsearch with phyloKNN.
     :param distance_matrix:
     :param clf:
     :param scorer:
@@ -55,9 +55,8 @@ def phyloNN_gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, 
 
 def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None, njobs=1, verbose=2, init_points=10, n_iter=50):
     '''
-    Example of how to use bayesian optimisation with phyloNN.
+    Example of how to use bayesian optimisation with phyloKNN.
     :param distance_matrix:
-    :param worst_score:
     :param clf:
     :param scorer:
     :param cv:

@@ -53,13 +53,13 @@ def evaluate_model_params(continuous:bool=True):
 
     ax = sns.scatterplot(x=gt_kappas, y=phylnn_scores)
     ax.set_xlabel("Ground truth kappa'")
-    ax.set_ylabel("PhyloNN loss")
+    ax.set_ylabel("phyloKNN loss")
     plt.savefig(os.path.join(plot_path, 'kappa_score_plot.jpg'), dpi=300)
     plt.close()
 
     ax = sns.scatterplot(x=lambdas, y=phylnn_scores)
     ax.set_xlabel("Ground truth lambda")
-    ax.set_ylabel("PhyloNN loss")
+    ax.set_ylabel("phyloKNN loss")
     plt.savefig(os.path.join(plot_path, 'lambda_score_plot.jpg'), dpi=300)
     plt.close()
 

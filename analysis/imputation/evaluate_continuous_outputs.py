@@ -14,7 +14,7 @@ def evaluate_continuous_output(tag):
     ground_truth = pd.read_csv(os.path.join(continuous_input_path, tag, 'simData_FinalData.csv'), index_col=0)
     missing_values = pd.read_csv(os.path.join(continuous_input_path, tag, 'mcar_values.csv'), index_col=0)
     my_predictions = pd.read_csv(os.path.join(continuous_output_path, tag, 'phylnn.csv'), index_col=0)[['0']]
-    my_predictions.columns = ['PhyloNN']
+    my_predictions.columns = ['phyloKNN']
     Rphylopars_predictions = pd.read_csv(os.path.join(continuous_output_path, tag, 'Rphylopars.csv'), index_col=0)
     Rphylopars_predictions.columns = ['Rphylopars']
 
@@ -27,13 +27,13 @@ def evaluate_continuous_output(tag):
     full_df = pd.merge(test_ground_truths, my_predictions, left_index=True, right_index=True)
     full_df = pd.merge(full_df, Rphylopars_predictions, left_index=True, right_index=True)
 
-    nans_from_mine = full_df[full_df['PhyloNN'].isna()]
+    nans_from_mine = full_df[full_df['phyloKNN'].isna()]
     if len(nans_from_mine) > 0:
         print(f'Warning: dropping {len(nans_from_mine)} nans from analysis.')
-        full_df = full_df.dropna(subset=['PhyloNN'])
+        full_df = full_df.dropna(subset=['phyloKNN'])
 
     phylopars_score = mean_absolute_error(full_df[gt_target_name], full_df['Rphylopars'])
-    phylnn_score = mean_absolute_error(full_df[gt_target_name], full_df['PhyloNN'])
+    phylnn_score = mean_absolute_error(full_df[gt_target_name], full_df['phyloKNN'])
     return phylnn_score, phylopars_score
 
 
@@ -78,7 +78,7 @@ def collate():
     # Save to CSV
     df.to_csv(os.path.join('evaluation', 'continuous', "ttest_results.csv"), index=False)
 
-    plot_df = pd.DataFrame({'PhyloNN': phylnn_scores, 'Rphylopars': phylopars_scores})
+    plot_df = pd.DataFrame({'phyloKNN': phylnn_scores, 'Rphylopars': phylopars_scores})
     sns.violinplot(data=plot_df,fill=False)
     plt.savefig(os.path.join('evaluation', 'continuous', 'violin_plot.jpg'), dpi=300)
 
