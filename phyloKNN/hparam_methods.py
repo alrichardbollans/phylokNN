@@ -100,14 +100,21 @@ def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y
 
     # Bounded region of parameter space
     pbounds = {'ratio': (0, 1), 'kappa': (0, 3)}
-    optimizer = BayesianOptimization(
-        f=black_box_function,
-        pbounds=pbounds,
-        random_state=None,
-        verbose=verbose
-    )
 
-    optimizer.maximize(init_points=init_points, n_iter=n_iter)
+    while True:
+
+        try:
+            optimizer = BayesianOptimization(
+                f=black_box_function,
+                pbounds=pbounds,
+                random_state=None,
+                verbose=verbose
+            )
+
+            optimizer.maximize(init_points=init_points, n_iter=n_iter)
+            break
+        except TypeError:
+            print(f'WARNING: Bayesian optimization failed to initialise -- retrying..')
 
     print(optimizer.max)
     best_ratio = optimizer.max['params']['ratio']
