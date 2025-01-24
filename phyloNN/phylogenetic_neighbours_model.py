@@ -2,11 +2,10 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
-from sklearn.utils import get_tags
+from numpy.typing import ArrayLike
+from sklearn.base import BaseEstimator
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted, validate_data
-from numpy.typing import ArrayLike
 
 from phyloNN import get_first_column
 
@@ -29,8 +28,8 @@ class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorM
     Multidimensional X is not supported, a workaround could be to always use the first column of an array, this is not ideal but would allow proper incorporation with scikitlearn.
     '''
 
-    def __init__(self, distance_matrix: pd.DataFrame, clf: bool, ratio_max_branch_length: float,
-                 kappa: float, fill_in_unknowns_with_mean: bool = True):
+    def __init__(self, distance_matrix: pd.DataFrame, clf: bool, ratio_max_branch_length: float = None,
+                 kappa: float = None, fill_in_unknowns_with_mean: bool = True):
         """
         :param distance_matrix: A pandas DataFrame representing the distance matrix between instances. Indices and columns should be taxon names. Should include all train, test species and unknown species for predictions.
         :param clf: A boolean indicating whether to output binary classes or continuous estimates for final predictions
@@ -41,10 +40,18 @@ class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorM
 
         self.distance_matrix = distance_matrix  # .copy(deep=False) # Making a shallow copy to reduce RAM with multiple instances, but breaks when cloning class.
         self.clf = clf
+        if ratio_max_branch_length is None:
+            ratio_max_branch_length = 1
         self.ratio_max_branch_length = ratio_max_branch_length
 
+        if kappa is None:
+            kappa = 1
         self.kappa = kappa
+
         self.fill_in_unknowns_with_mean = fill_in_unknowns_with_mean
+
+        if ratio_max_branch_length < 0 or ratio_max_branch_length > 1:
+            raise ValueError('ratio_max_branch_length must be between 0 and 1')
 
     @staticmethod
     def check_integrity_of_distance_matrix(dist_matrix: pd.DataFrame):

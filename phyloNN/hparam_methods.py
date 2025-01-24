@@ -1,12 +1,15 @@
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.model_selection import GridSearchCV, cross_val_score
+
+sklearn.set_config(enable_metadata_routing=True)
 
 from phyloNN import PhylNearestNeighbours
 
 
-def gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None,
-               ratios: list = None, kappas: list = None, njobs=-1):
+def phyloNN_gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None,
+                       ratios: list = None, kappas: list = None, njobs=-1):
     '''
     A utility functin showing how best to use gridsearch with phyloNN.
     :param distance_matrix:
@@ -26,7 +29,8 @@ def gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weigh
         kappas = [0.1, 0.25, 0.33, 0.5, 0.75, 1, 1.5, 2, 3]
     if ratios is None:
         ratios = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
-    phyln = PhylNearestNeighbours(distance_matrix, clf, 1, 1, fill_in_unknowns_with_mean=True)
+    phyln = PhylNearestNeighbours(distance_matrix, clf, 1, 1, fill_in_unknowns_with_mean=False)
+
     gs = GridSearchCV(
         estimator=phyln,
         param_grid={'ratio_max_branch_length': ratios,
@@ -35,10 +39,11 @@ def gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weigh
         n_jobs=njobs,
         scoring=scorer,
         verbose=1,
-        error_score=np.nan,
+        error_score="raise",
         refit=True
     )
 
+    phyln.set_fit_request(sample_weight=True)
     fitted_gs = gs.fit(X, y, sample_weight=weights)
     print(fitted_gs.best_params_)
     if fitted_gs.best_params_['ratio_max_branch_length'] == 0:
@@ -48,10 +53,11 @@ def gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weigh
     return fitted_gs
 
 
-def bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None, njobs=1, verbose=2):
+def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None, njobs=1, verbose=2, init_points=10, n_iter=50):
     '''
     Example of how to use bayesian optimisation with phyloNN.
     :param distance_matrix:
+    :param worst_score:
     :param clf:
     :param scorer:
     :param cv:
@@ -59,33 +65,50 @@ def bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weight
     :param y:
     :param weights:
     :param njobs:
+    :param verbose: param for BayesianOptimization
+    :param init_points: param for BayesianOptimization
+    :param n_iter: param for BayesianOptimization
     :return:
     '''
     from bayes_opt import BayesianOptimization
 
+    global _worst_score
+    _worst_score = None
+    print(_worst_score)
     def black_box_function(ratio, kappa):
         """Function with unknown internals we wish to maximize.
 
-        This is just serving as an example, for all intents and
-        purposes think of the internals of this function, i.e.: the process
-        which generates its output values, as unknown.
+        When NaN is returned for all values of cross_val_score, the current worst score is returned. This will break if the first try returns NaN.
         """
-        phyln = PhylNearestNeighbours(distance_matrix, clf, ratio, kappa, fill_in_unknowns_with_mean=True)
 
-        cv_score = cross_val_score(phyln, X, y, cv=cv, scoring=scorer, n_jobs=njobs, params={'sample_weight': weights})
+        if distance_matrix is None:
+            return 0
+        phyln = PhylNearestNeighbours(distance_matrix, clf, ratio, kappa, fill_in_unknowns_with_mean=False)
+        # Add metadating routing for sample weights
+        scorer.set_score_request(sample_weight=True)
+        phyln.set_fit_request(sample_weight=True)
+        cv_score = cross_val_score(phyln, X, y, cv=cv, scoring=scorer, n_jobs=njobs, params={'sample_weight': weights}, error_score="raise")
+        out = np.mean(cv_score)
+        global _worst_score
+        if np.isnan(out):
+            return _worst_score
+        elif _worst_score is None:
+            _worst_score = out
+        elif out < _worst_score:
+            _worst_score = out
 
-        return np.mean(cv_score)
+        return out
 
     # Bounded region of parameter space
     pbounds = {'ratio': (0, 1), 'kappa': (0, 3)}
     optimizer = BayesianOptimization(
         f=black_box_function,
         pbounds=pbounds,
-        random_state=1,
+        random_state=None,
         verbose=verbose
     )
-    optimizer.maximize(init_points=10, n_iter=100
-                       )
+
+    optimizer.maximize(init_points=init_points, n_iter=n_iter)
 
     print(optimizer.max)
     best_ratio = optimizer.max['params']['ratio']
@@ -99,6 +122,4 @@ def bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weight
             f'WARNING: kappa set to small value: {best_kappa}, this may mean unweighted means performed best in hyperparameter search and '
             f'that distances are not useful in predictions.')
 
-    best_phyln = PhylNearestNeighbours(distance_matrix, clf, ratio_max_branch_length=best_ratio, kappa=best_kappa, fill_in_unknowns_with_mean=True)
-    best_phyln.fit(X, y, sample_weight=weights)
-    return best_phyln
+    return best_ratio, best_kappa

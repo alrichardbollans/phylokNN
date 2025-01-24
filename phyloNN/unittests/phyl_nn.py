@@ -7,7 +7,7 @@ from sklearn.metrics import mean_absolute_error, make_scorer, brier_score_loss
 from sklearn.model_selection import KFold, GridSearchCV
 from sklearn.utils.estimator_checks import check_estimator
 
-from phyloNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn, gridsearch, bayes_opt
+from phyloNN import PhylNearestNeighbours, get_gridsearch_best_hparams_for_phylnn, phyloNN_gridsearch, phyloNN_bayes_opt, nan_safe_metric_wrapper
 
 
 class Testpredict_phylogenetic_neighbours_with_all_neighbours(unittest.TestCase):
@@ -341,7 +341,9 @@ class testgridsearch(unittest.TestCase):
     def test_try_proper_gridsearch(self):
         # This is how to do gridsearch -- set fill in means to off with error_score = np.nan and then fit a new model.
         phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=False)
-        mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+        mean_absolute_error_nan_safe = nan_safe_metric_wrapper(mean_absolute_error)
+
+        mae_scorer = make_scorer(mean_absolute_error_nan_safe, greater_is_better=False)
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
         gs = GridSearchCV(
             estimator=phyln,
@@ -351,7 +353,7 @@ class testgridsearch(unittest.TestCase):
             n_jobs=1,
             scoring=mae_scorer,
             verbose=1,
-            error_score=np.nan,
+            error_score='raise',
             refit=False
         )
 
@@ -368,8 +370,9 @@ class testgridsearch(unittest.TestCase):
         weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
 
         # This is how to do gridsearch -- set fill in means to off with error_score = np.nan and then fit a new model.
-        phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=True)
-        mae_scorer = make_scorer(mean_absolute_error, greater_is_better=False)
+        phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=False)
+        mean_absolute_error_nan_safe = nan_safe_metric_wrapper(mean_absolute_error)
+        mae_scorer = make_scorer(mean_absolute_error_nan_safe, greater_is_better=False)
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
         gs = GridSearchCV(
             estimator=phyln,
@@ -379,9 +382,10 @@ class testgridsearch(unittest.TestCase):
             n_jobs=1,
             scoring=mae_scorer,
             verbose=1,
-            error_score=np.nan,
+            error_score='raise',
             refit=False
         )
+        phyln.set_fit_request(sample_weight=True)
 
         fitted_gs = gs.fit([['A'], ['B'], ['C']], [1, 0, 1], sample_weight=weights)
         print(fitted_gs.best_params_)
@@ -389,7 +393,7 @@ class testgridsearch(unittest.TestCase):
             print(
                 f'WARNING: Max distance set to 0, this means unweighted means performed best in gridsearch and that NaNs/mean values will be predicted for all inputs (barring polytomies).')
         best_phyln = PhylNearestNeighbours(self.distance_matrix, True, fitted_gs.best_params_['ratio_max_branch_length'],
-                                           fitted_gs.best_params_['kappa'], fill_in_unknowns_with_mean=True)
+                                           fitted_gs.best_params_['kappa'], fill_in_unknowns_with_mean=False)
         best_phyln.fit([['A'], ['B'], ['C']], [1, 0, 1], sample_weight=weights)
         predictions = best_phyln.predict_proba([['D'], ['E']])[:, 1]
         self.assertTrue(isinstance(predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
@@ -397,14 +401,29 @@ class testgridsearch(unittest.TestCase):
 
         ## my gs example
 
-        gs = gridsearch(self.distance_matrix, clf=True, scorer=mae_scorer, cv=cv, X=[['A'], ['B'], ['C']], y=[1, 0, 1], weights=weights)
+        gs = phyloNN_gridsearch(self.distance_matrix, clf=True, scorer=mae_scorer, cv=cv, X=[['A'], ['B'], ['C']], y=[1, 0, 1], weights=weights)
         gs_predictions = gs.predict_proba([['D'], ['E']])[:, 1]
         self.assertTrue(isinstance(gs_predictions, np.ndarray), 'Predict_proba method should return Pandas DataFrame.')
         np.testing.assert_array_almost_equal(gs_predictions, [1, 0.7751], decimal=4)
 
     def test_bayes(self):
-        _scorer = make_scorer(brier_score_loss, greater_is_better=False)
-        optimized = bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),X=[['A'], ['B'], ['C']], y=[1, 0, 1])
+
+        brier_score_loss_nan_safe = nan_safe_metric_wrapper(brier_score_loss)
+
+        _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False)
+        r,k = phyloNN_bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),
+                                      X=[['A'], ['B'], ['C']], y=[1, 0, 1], init_points=10, n_iter=10)
+
+        _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False)
+        weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
+        r2,k2 = phyloNN_bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),
+                                      X=[['A'], ['B'], ['C']], y=[1, 2, 1], weights=weights, init_points=10, n_iter=10)
+
+        print(r)
+        print(r2)
+        print(k2)
+        assert (r != r2) or (k != k2)
+
 
 if __name__ == '__main__':
     unittest.main()
