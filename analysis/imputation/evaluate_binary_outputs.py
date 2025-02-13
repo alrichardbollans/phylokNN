@@ -39,55 +39,71 @@ def evaluate_bin_output(tag):
         return phylnn_score, corHMM_score
 
 
-def collate():
+def collate(input_path, output_path, eval_caller:callable, other_model_name:str):
     phylnn_scores = []
-    corHMM_scores = []
+    other_model_scores = []
 
     phylnn_better = []
-    corHMM_better = []
+    other_model_better = []
+    score_diffs = []
+
+    lambdas = []
     for tag in range(1, 11):
-        phylnn_score, corHMM_score = evaluate_bin_output(str(tag))
+        phylnn_score, other_score = eval_caller(str(tag))
         if phylnn_score is not None:
             phylnn_scores.append(phylnn_score)
-            corHMM_scores.append(corHMM_score)
-            param_df = pd.read_csv(os.path.join(binary_input_path, str(tag), 'dataframe_params.csv'), index_col=0)
-            if phylnn_score < corHMM_score:
+            other_model_scores.append(other_score)
+            score_diff = phylnn_score - other_score
+            score_diffs.append(score_diff)
+            param_df = pd.read_csv(os.path.join(input_path, str(tag), 'dataframe_params.csv'), index_col=0)
+            if phylnn_score < other_score:
                 phylnn_better.append(param_df)
-            elif corHMM_score < phylnn_score:
-                corHMM_better.append(param_df)
+            elif other_score < phylnn_score:
+                other_model_better.append(param_df)
+
+            lamba = param_df['lambda'].iloc[0]
+            kappa = param_df['kappa'].iloc[0]
+            lambdas.append(lamba)
     phylnn_better_df = pd.concat(phylnn_better)
-    if len(corHMM_better) == 0:
-        corHMM_better_df = pd.DataFrame()
+    if len(other_model_better) == 0:
+        other_model_better_df = pd.DataFrame()
     else:
-        corHMM_better_df = pd.concat(corHMM_better)
-        corHMM_better_df.describe(include='all').to_csv(os.path.join('evaluation', 'binary', 'corHMM_better_params_stats.csv'))
+        other_model_better_df = pd.concat(other_model_better)
+        other_model_better_df.describe(include='all').to_csv(os.path.join(output_path, f'{other_model_name}_better_params_stats.csv'))
 
 
-    phylnn_better_df.to_csv(os.path.join('evaluation', 'binary', 'phylnn_better_params.csv'))
-    phylnn_better_df.describe(include='all').to_csv(os.path.join('evaluation', 'binary', 'phylnn_better_params_stats.csv'))
-    corHMM_better_df.to_csv(os.path.join('evaluation', 'binary', 'corHMM_better_params.csv'))
+    phylnn_better_df.to_csv(os.path.join(output_path, 'phylnn_better_params.csv'))
+    phylnn_better_df.describe(include='all').to_csv(os.path.join(output_path, 'phylnn_better_params_stats.csv'))
+    other_model_better_df.to_csv(os.path.join(output_path, f'{other_model_name}_better_params.csv'))
 
-    t_stat, p_value = ttest_rel(phylnn_scores, corHMM_scores)
+    t_stat, p_value = ttest_rel(phylnn_scores, other_model_scores)
     # Prepare the data for CSV
     results = {
         "Test": ["Paired t-test"],
         "t-statistic": [t_stat],
         "p-value": [p_value],
         "Phylnn Mean": [np.mean(phylnn_scores)],
-        "corHMM Mean": [np.mean(corHMM_scores)],
+        f'{other_model_name} Mean': [np.mean(other_model_scores)],
         "Phylnn better": [len(phylnn_better_df)],
-        "corHMM better": [len(corHMM_better_df)],
+        f'{other_model_name} better': [len(other_model_better_df)],
     }
 
     # Convert to a DataFrame
     df = pd.DataFrame(results)
 
     # Save to CSV
-    df.to_csv(os.path.join('evaluation', 'binary', "ttest_results.csv"), index=False)
+    df.to_csv(os.path.join(output_path, "ttest_results.csv"), index=False)
 
-    plot_df = pd.DataFrame({'phyloKNN': phylnn_scores, 'Rphylopars': corHMM_scores})
+    plot_df = pd.DataFrame({'phyloKNN': phylnn_scores, f'{other_model_name}': other_model_scores})
     sns.violinplot(data=plot_df, fill=False)
-    plt.savefig(os.path.join('evaluation', 'binary', 'violin_plot.jpg'), dpi=300)
+    plt.ylabel('Loss')
+    plt.savefig(os.path.join(output_path, 'violin_plot.jpg'), dpi=300)
+
+    sns.jointplot(x=score_diffs, y=lambdas, kind="reg")
+    plt.ylabel('Lambda')
+    plt.xlabel(f'PhyloNN Loss - {other_model_name} Loss')
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_path, 'joint_plot.jpg'), dpi=300)
 
 if __name__ == '__main__':
-    collate()
+    collate(binary_input_path, os.path.join('evaluation', 'binary'), evaluate_bin_output, 'corHMM')

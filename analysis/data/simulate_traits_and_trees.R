@@ -34,6 +34,10 @@ rescaleTree <- function(tree, subdata){
 assign("rescaleTree", rescaleTree, envir = asNamespace("TDIP"))
 lockBinding("rescaleTree", asNamespace("TDIP"))
 
+number_of_repetitions = 1000
+param_tree <- list(0.4, 0.1, 500)
+missingRate <- 0.1
+
 output_simulation <- function(simData, tree, tag,id, param_df){
   #PhyloNa
   phyloNa_values <- phyloNa_miss_meca(missingRate = missingRate,
@@ -41,6 +45,14 @@ output_simulation <- function(simData, tree, tag,id, param_df){
                                       tree = tree)
   #MCAR
   mcar_values <- mcar_miss_meca(missingRate = missingRate,
+                                ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
+  
+  #MNAR
+  mnar_values <- mnar_miss_meca(missingRate = missingRate,
+                                ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
+  
+  #MAR
+  mar_values <- mnar_miss_meca(missingRate = missingRate,
                                 ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
   
   ## Save data
@@ -53,15 +65,24 @@ output_simulation <- function(simData, tree, tag,id, param_df){
   saveRDS(simData, file=file.path(this_sim_path, 'simData.rds'))
   
   write.csv(simData$FinalData, file.path(this_sim_path, 'simData_FinalData.csv'))
+  ## Write missing values
   write.csv(mcar_values, file.path(this_sim_path, 'mcar_values.csv'))
   saveRDS(mcar_values, file=file.path(this_sim_path, 'mcar_values.rds'))
+  
+  write.csv(mnar_values, file.path(this_sim_path, 'mnar_values.csv'))
+  saveRDS(mnar_values, file=file.path(this_sim_path, 'mnar_values.rds'))
+  
+  write.csv(mar_values, file.path(this_sim_path, 'mar_values.csv'))
+  saveRDS(mar_values, file=file.path(this_sim_path, 'mar_values.rds'))
+  
   write.csv(phyloNa_values, file.path(this_sim_path, 'phyloNa_values.csv'))
+  saveRDS(phyloNa_values, file=file.path(this_sim_path, 'phyloNa_values.rds'))
+  
   write.csv(param_df, file.path(this_sim_path, 'dataframe_params.csv'))
   write.csv(param_tree, file.path(this_sim_path, 'param_tree.csv'))
 }
-param_tree <- list(0.4, 0.1, 500)
-missingRate <- 0.1
-for(i in 1:10){
+
+for(i in 1:number_of_repetitions){
   ev_models = c('BM1', 'OU1')
   ev_model = ev_models[[sample(1:length(ev_models), 1)]]
   lambda = runif(1, min=0, max=1)
@@ -89,7 +110,7 @@ for(i in 1:10){
   output_simulation(simcontinuousData, tree,'continuous', i, continuous_dataframe)
   
 }
-for(i in 1:10){
+for(i in 1:number_of_repetitions){
   ev_models = c('ARD', 'SYM', 'ER')
   ev_model = ev_models[[sample(1:length(ev_models), 1)]]
   lambda = runif(1, min=0, max=1)

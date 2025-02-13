@@ -1,7 +1,7 @@
 library(TDIP)
 # tag='1'
 
-for(i in 1:10){
+for(i in 1:1000){
   tag = as.character(i)
   sim_path = file.path('simulations', 'continuous')
   mcar_values = read.csv(file.path(sim_path, tag, 'mcar_values.csv'), row.names = 1)

@@ -1,12 +1,16 @@
 library(TDIP)
 
-for(i in 1:10){
+for(i in 1:1000){
   print(i)
   tag = as.character(i)
   sim_path = file.path('simulations', 'binary')
-  mcar_values = readRDS(file.path(sim_path, tag, 'mcar_values.rds')) # easier to read as R object to preserve dtype
-  # phyloNa_values = read.csv(file.path(sim_path, tag, 'phyloNa_values.csv'), row.names = 1)
   simData = readRDS(file.path(sim_path, tag, 'simData.rds'))
+  
+  missingness_types = c('mcar', 'phyloNa', 'mnar', 'mar')
+  # easier to read as R object to preserve dtype
+  mcar_values = readRDS(file.path(sim_path, tag, 'mcar_values.rds')) 
+  phyloNa_values = readRDS(file.path(sim_path, tag, 'phyloNa_values.rds'), row.names = 1)
+
   
   method = "pi_categorical_traits"
   target_name = names(mcar_values)

@@ -1,12 +1,9 @@
 import os.path
 
-import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
-from scipy.stats import ttest_rel
 from sklearn.metrics import mean_absolute_error
-import seaborn as sns
 
+from analysis.imputation.evaluate_binary_outputs import collate
 from analysis.imputation.phylnn_predictions import continuous_output_path, continuous_input_path
 
 
@@ -37,51 +34,5 @@ def evaluate_continuous_output(tag):
     return phylnn_score, phylopars_score
 
 
-def collate():
-    phylnn_scores = []
-    phylopars_scores = []
-
-    phylnn_better = []
-    phylopars_better = []
-    for tag in range(1, 11):
-        phylnn_score, phylopars_score = evaluate_continuous_output(str(tag))
-        phylnn_scores.append(phylnn_score)
-        phylopars_scores.append(phylopars_score)
-        param_df = pd.read_csv(os.path.join(continuous_input_path, str(tag), 'dataframe_params.csv'), index_col=0)
-        if phylnn_score < phylopars_score:
-            phylnn_better.append(param_df)
-        elif phylopars_score < phylnn_score:
-            phylopars_better.append(param_df)
-    phylnn_better_df = pd.concat(phylnn_better)
-    phylopars_better_df = pd.concat(phylopars_better)
-
-    phylnn_better_df.to_csv(os.path.join('evaluation', 'continuous', 'phylnn_better_params.csv'))
-    phylnn_better_df.describe(include='all').to_csv(os.path.join('evaluation', 'continuous', 'phylnn_better_params_stats.csv'))
-    phylopars_better_df.to_csv(os.path.join('evaluation', 'continuous', 'phylopars_better_params.csv'))
-    phylopars_better_df.describe(include='all').to_csv(os.path.join('evaluation', 'continuous', 'phylopars_better_params_stats.csv'))
-
-    t_stat, p_value = ttest_rel(phylnn_scores, phylopars_scores)
-    # Prepare the data for CSV
-    results = {
-        "Test": ["Paired t-test"],
-        "t-statistic": [t_stat],
-        "p-value": [p_value],
-        "Phylnn Mean": [np.mean(phylnn_scores)],
-        "Rphylopars Mean": [np.mean(phylopars_scores)],
-        "Phylnn better": [len(phylnn_better_df)],
-        "Rphylopars better": [len(phylopars_better_df)],
-    }
-
-    # Convert to a DataFrame
-    df = pd.DataFrame(results)
-
-    # Save to CSV
-    df.to_csv(os.path.join('evaluation', 'continuous', "ttest_results.csv"), index=False)
-
-    plot_df = pd.DataFrame({'phyloKNN': phylnn_scores, 'Rphylopars': phylopars_scores})
-    sns.violinplot(data=plot_df,fill=False)
-    plt.savefig(os.path.join('evaluation', 'continuous', 'violin_plot.jpg'), dpi=300)
-
-
 if __name__ == '__main__':
-    collate()
+    collate(continuous_input_path, os.path.join('evaluation', 'continuous'), evaluate_continuous_output, 'Rphylopars')

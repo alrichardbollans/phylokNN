@@ -15,7 +15,7 @@ def evaluate_model_params(continuous:bool=True):
     ratio_max_dists = []
     gt_kappas = []
     model_kappas = []
-    phylnn_scores = []
+
     if continuous:
         in_path = continuous_input_path
         out_path = continuous_output_path
@@ -35,9 +35,9 @@ def evaluate_model_params(continuous:bool=True):
         model_kappas.append(model_kappa)
         if continuous:
 
-            phylnn_score, phylopars_score = evaluate_continuous_output(tag)
+            phylnn_score, other_model_score = evaluate_continuous_output(tag)
         else:
-            phylnn_score, phylopars_score = evaluate_bin_output(tag)
+            phylnn_score, other_model_score = evaluate_bin_output(tag)
 
         phylnn_scores.append(phylnn_score)
     if continuous:
