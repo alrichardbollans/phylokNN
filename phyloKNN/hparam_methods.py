@@ -76,7 +76,6 @@ def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y
 
     global _worst_score
     _worst_score = None
-    print(_worst_score)
     def black_box_function(ratio, kappa):
         """Function with unknown internals we wish to maximize.
 

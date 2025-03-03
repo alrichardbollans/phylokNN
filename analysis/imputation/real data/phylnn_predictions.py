@@ -40,19 +40,27 @@ def predict(continuous: bool):
 
     missing_values_df = pd.read_csv(missing_values_csv)
 
-    distance_df = pd.read_csv(distance_csv, index_col=0, nrows=10)
+    distance_df = pd.read_csv(distance_csv, index_col=0)
     cols_for_distance_df = [c for c in distance_df.columns if c in missing_values_df[missing_values_df.columns[0]].values]
     distance_df = distance_df[cols_for_distance_df]
     distance_df = distance_df.loc[cols_for_distance_df]
+    if clf:
+        unknown_cases = [c for c in missing_values_df['accepted_species'].values if c not in cols_for_distance_df]
+        assert len(unknown_cases) < 200 # Some species are in the MPNS data but aren't in the tree, these seem to only be hybrids.
+        missing_values_df = missing_values_df[missing_values_df['accepted_species'].isin(cols_for_distance_df)]
     assert len(distance_df) == len(missing_values_df)
     assert 2 == len(missing_values_df.columns)
     target_name = missing_values_df.columns[1]
     train = missing_values_df[~missing_values_df[target_name].isna()]
 
+    njobs = -1
+    if not continuous:
+        njobs = 1
+
     best_ratio, best_kappa = phyloNN_bayes_opt(
         distance_df,
         clf=clf,
-        scorer=val_scorer, cv=KFold(n_splits=5, shuffle=True, random_state=42), X=train, y=train[target_name].values, njobs=-1, verbose=0)
+        scorer=val_scorer, cv=KFold(n_splits=5, shuffle=True, random_state=42), X=train, y=train[target_name].values, njobs=njobs, verbose=0)
 
     best_phyln_fill_means = PhylNearestNeighbours(distance_df, clf, ratio_max_branch_length=best_ratio, kappa=best_kappa,
                                                   fill_in_unknowns_with_mean=True)
@@ -86,7 +94,7 @@ def predict(continuous: bool):
 
 def main():
 
-        predict(True)
+        # predict(True)
 
         predict(False)
 
