@@ -69,6 +69,9 @@ def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y
     :param n_iter: param for BayesianOptimization
     :return:
     '''
+
+    assert len(set(distance_matrix.columns).intersection(set(X[X.columns[0]].values))) > 0
+
     from bayes_opt import BayesianOptimization
 
     global _worst_score
