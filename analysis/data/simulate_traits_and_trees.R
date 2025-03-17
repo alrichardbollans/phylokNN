@@ -1,11 +1,14 @@
 # Do binary and continuous cases under different evolutionary assumptions
 # https://github.com/Matgend/TDIP
+# install.packages('nloptr')
 # install.packages(c('mlr3pipelines', 'missMDA', 'mlr3learners', 'Amelia', 'softImpute', 'missRanger'))
 # install.packages(c('missForest', 'VIM'))
-# install.packages("NADIA_0.4.2.tar.gz", repos = NULL, type = "source")
+# install.packages("NADIA_0.4.2.tar.gz", repos = NULL, type = "source") #https://github.com/Matgend/TDIP?tab=readme-ov-file#installation
 # install.packages(c('truncnorm'))
-# install.packages("faux_1.2.1.tar.gz", repos = NULL, type = "source")
+# install.packages("faux_1.2.1.tar.gz", repos = NULL, type = "source") #https://github.com/Matgend/TDIP/issues/1
 # remotes::install_version("geiger", version = "2.0.10") # see https://github.com/Matgend/TDIP/issues/1
+# packageVersion("geiger")
+# install.packages(c('gmp', 'Rmpfr', 'corHMM')) # apt-get install libgmp-dev libmpfr-dev
 # devtools::install_github("Matgend/TDIP")
 
 # Gendre Matthieu. 2022. TDIP: Trait Data Imputation with Phylogeny.
@@ -34,27 +37,36 @@ rescaleTree <- function(tree, subdata){
 assign("rescaleTree", rescaleTree, envir = asNamespace("TDIP"))
 lockBinding("rescaleTree", asNamespace("TDIP"))
 
-number_of_repetitions = 1000
-param_tree <- list(0.4, 0.1, 500)
+number_of_repetitions = 2
+param_tree <- list(0.4, 0.1, 100) # Values used in Gendre paper
 missingRate <- 0.1
 
+dir.create('simulations')
+
+update_trait_columns <- function(df){
+  df <- cbind(accepted_species = rownames(df), df)
+  rownames(df) <- 1:nrow(df)
+  return(df)
+}
+
 output_simulation <- function(simData, tree, tag,id, param_df){
+  
   #PhyloNa
   phyloNa_values <- phyloNa_miss_meca(missingRate = missingRate,
                                       ds = simData$FinalData,
-                                      tree = tree)
+                                      tree = tree)[[1]]
   #MCAR
   mcar_values <- mcar_miss_meca(missingRate = missingRate,
                                 ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
-  
+
   #MNAR
   mnar_values <- mnar_miss_meca(missingRate = missingRate,
                                 ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
-  
+
   #MAR
   mar_values <- mnar_miss_meca(missingRate = missingRate,
                                 ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
-  
+
   ## Save data
   this_sim_path = file.path('simulations', tag, id)
   dir.create(this_sim_path)
@@ -64,22 +76,24 @@ output_simulation <- function(simData, tree, tag,id, param_df){
   
   saveRDS(simData, file=file.path(this_sim_path, 'simData.rds'))
   
-  write.csv(simData$FinalData, file.path(this_sim_path, 'simData_FinalData.csv'))
+  write.csv(update_trait_columns(simData$FinalData), file.path(this_sim_path, 'ground_truth.csv'),row.names = FALSE)
   ## Write missing values
-  write.csv(mcar_values, file.path(this_sim_path, 'mcar_values.csv'))
+  write.csv(update_trait_columns(mcar_values), file.path(this_sim_path, 'mcar_values.csv'),row.names = FALSE)
   saveRDS(mcar_values, file=file.path(this_sim_path, 'mcar_values.rds'))
   
-  write.csv(mnar_values, file.path(this_sim_path, 'mnar_values.csv'))
+  write.csv(update_trait_columns(mnar_values), file.path(this_sim_path, 'mnar_values.csv'),row.names = FALSE)
   saveRDS(mnar_values, file=file.path(this_sim_path, 'mnar_values.rds'))
   
-  write.csv(mar_values, file.path(this_sim_path, 'mar_values.csv'))
+  write.csv(update_trait_columns(mar_values), file.path(this_sim_path, 'mar_values.csv'),row.names = FALSE)
   saveRDS(mar_values, file=file.path(this_sim_path, 'mar_values.rds'))
   
-  write.csv(phyloNa_values, file.path(this_sim_path, 'phyloNa_values.csv'))
+  write.csv(update_trait_columns(phyloNa_values), file.path(this_sim_path, 'phyloNa_values.csv'),row.names = FALSE)
   saveRDS(phyloNa_values, file=file.path(this_sim_path, 'phyloNa_values.rds'))
   
   write.csv(param_df, file.path(this_sim_path, 'dataframe_params.csv'))
   write.csv(param_tree, file.path(this_sim_path, 'param_tree.csv'))
+  
+  ape::write.tree(simData$TreeList$`1`, file.path(this_sim_path, 'tree.tre'))
 }
 
 for(i in 1:number_of_repetitions){
@@ -107,6 +121,7 @@ for(i in 1:number_of_repetitions){
   simcontinuousData$FinalData[target_name] <- scale(simcontinuousData$FinalData[target_name])
   
   tree = simcontinuousData$TreeList$`1`
+  dir.create(file.path('simulations', 'continuous'))
   output_simulation(simcontinuousData, tree,'continuous', i, continuous_dataframe)
   
 }
@@ -130,6 +145,7 @@ for(i in 1:number_of_repetitions){
   simbinaryData <- data_simulator(param_tree = param_tree, 
                                       dataframe = binary_dataframe)
   tree = simbinaryData$TreeList$`1`
+  dir.create(file.path('simulations', 'binary'))
   output_simulation(simbinaryData, tree,'binary', i,binary_dataframe)
 }
 

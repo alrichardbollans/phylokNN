@@ -412,12 +412,12 @@ class testgridsearch(unittest.TestCase):
 
         _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False)
         r,k = phyloNN_bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),
-                                      X=[['A'], ['B'], ['C']], y=[1, 0, 1], init_points=10, n_iter=10)
+                                      X=pd.DataFrame([['A'], ['B'], ['C']]), y=[1, 0, 1], init_points=10, n_iter=10)
 
         _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False)
         weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
         r2,k2 = phyloNN_bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),
-                                      X=[['A'], ['B'], ['C']], y=[1, 2, 1], weights=weights, init_points=10, n_iter=10)
+                                      X=pd.DataFrame([['A'], ['B'], ['C']]), y=[1, 2, 1], weights=weights, init_points=10, n_iter=10)
 
         print(r)
         print(r2)

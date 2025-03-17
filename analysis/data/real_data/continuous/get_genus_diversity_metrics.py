@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -60,6 +61,12 @@ def main():
 
 def get_an_mcar_sample():
     df = pd.read_csv(os.path.join('outputs', 'group_data', 'Genus.csv'))[['Genus', 'APWD']]
+    df = df.rename(columns={'Genus': 'accepted_species'}) # just for compatability with rest of analysis
+    out_path = '1'
+    pathlib.Path(out_path).mkdir(exist_ok=True)
+
+    df.to_csv(os.path.join(out_path, 'ground_truth.csv'), index=False)
+
     total_data = len(df)
     print(total_data)
     df.loc[df.sample(frac=0.1).index, 'APWD'] = np.nan
@@ -68,7 +75,7 @@ def get_an_mcar_sample():
     ratio = len(nan_data) / total_data
     print(ratio)
     assert ratio > 0.0999 and ratio < 0.1001
-    df.to_csv(os.path.join('outputs', 'group_data', 'continuous_gentianales_mcar_sample.csv'), index=False)
+    df.to_csv(os.path.join(out_path, 'mcar_values.csv'), index=False)
 
 
 if __name__ == '__main__':

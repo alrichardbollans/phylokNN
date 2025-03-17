@@ -53,7 +53,7 @@ def phyloNN_gridsearch(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, 
     return fitted_gs
 
 
-def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X, y, weights=None, njobs=1, verbose=2, init_points=10, n_iter=50):
+def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X:pd.DataFrame, y, weights=None, njobs=1, verbose=2, init_points=10, n_iter=50):
     '''
     Example of how to use bayesian optimisation with phyloKNN.
     :param distance_matrix:
