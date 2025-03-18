@@ -12,8 +12,8 @@ repo_path = os.environ.get('KEWSCRATCHPATH')
 input_data_path = os.path.join(repo_path, 'phyloKNN', 'analysis', 'data')
 prediction_path = os.path.join(repo_path, 'phyloKNN', 'analysis', 'imputation')
 
-number_of_simulation_iterations = 2
-missingness_types = ['mcar', 'phyloNa', 'mnar', 'mar']
+number_of_simulation_iterations = 100
+missingness_types = ['mcar', 'phyloNa']
 
 
 def get_iteration_bath_from_base(base: str, real_or_sim: str, bin_or_cont: str, iteration: int):
