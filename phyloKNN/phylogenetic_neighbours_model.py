@@ -3,14 +3,14 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from numpy.typing import ArrayLike
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 from phyloKNN import get_first_column
 
 
-class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorMixin so sklearn thinks this is a classifier
+class PhylNearestNeighbours(BaseEstimator):
     '''
     General idea
     # Given a phylogeny with traits to predict, convert to a distance matrix
@@ -52,6 +52,13 @@ class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorM
 
         if ratio_max_branch_length < 0 or ratio_max_branch_length > 1:
             raise ValueError('ratio_max_branch_length must be between 0 and 1')
+
+    def __sklearn_tags__(self):
+        # This isn't the best way to implement this, but is a quick fix.
+        tags = super().__sklearn_tags__()
+        if self.clf:
+            tags.estimator_type = "classifier"
+        return tags
 
     @staticmethod
     def check_integrity_of_distance_matrix(dist_matrix: pd.DataFrame):
@@ -193,6 +200,10 @@ class PhylNearestNeighbours(BaseEstimator):  # ClassifierMixin before RegressorM
 
         if self.clf:
             self.classes_ = unique_labels(y_series.unique().tolist())
+
+            if len(self.classes_) > 2:
+                raise NotImplementedError('Method currently only implemented for binary classification. '
+                                          'If your classes are ordinal, you could use the continuous version and round outputs.')
         self.labelled_training_data_ = y_series.to_frame(name=self.target_name_)
 
         assert len(X) == len(y)

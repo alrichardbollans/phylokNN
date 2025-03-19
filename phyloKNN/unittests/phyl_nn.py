@@ -372,7 +372,7 @@ class testgridsearch(unittest.TestCase):
         # This is how to do gridsearch -- set fill in means to off with error_score = np.nan and then fit a new model.
         phyln = PhylNearestNeighbours(self.distance_matrix, True, 1, 1, fill_in_unknowns_with_mean=False)
         mean_absolute_error_nan_safe = nan_safe_metric_wrapper(mean_absolute_error)
-        mae_scorer = make_scorer(mean_absolute_error_nan_safe, greater_is_better=False)
+        mae_scorer = make_scorer(mean_absolute_error_nan_safe, greater_is_better=False, response_method='predict_proba')
         cv = KFold(n_splits=2, shuffle=True, random_state=3)
         gs = GridSearchCV(
             estimator=phyln,
@@ -410,14 +410,14 @@ class testgridsearch(unittest.TestCase):
 
         brier_score_loss_nan_safe = nan_safe_metric_wrapper(brier_score_loss)
 
-        _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False)
+        _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False, response_method='predict_proba')
         r,k = phyloNN_bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),
                                       X=pd.DataFrame([['A'], ['B'], ['C']]), y=[1, 0, 1], init_points=10, n_iter=10)
 
-        _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False)
+        _scorer = make_scorer(brier_score_loss_nan_safe, greater_is_better=False, response_method='predict_proba')
         weights = pd.Series([1, 3, 9], index=['A', 'B', 'C'])
         r2,k2 = phyloNN_bayes_opt(self.distance_matrix, clf=True, scorer=_scorer, cv=KFold(n_splits=2, shuffle=True, random_state=3),
-                                      X=pd.DataFrame([['A'], ['B'], ['C']]), y=[1, 2, 1], weights=weights, init_points=10, n_iter=10)
+                                      X=pd.DataFrame([['A'], ['B'], ['C']]), y=[0, 0, 1], weights=weights, init_points=10, n_iter=10)
 
         print(r)
         print(r2)

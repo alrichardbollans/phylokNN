@@ -70,6 +70,10 @@ def phyloNN_bayes_opt(distance_matrix: pd.DataFrame, clf: bool, scorer, cv, X:pd
     :return:
     '''
 
+    if clf:
+        if scorer._response_method == 'predict':
+            print(f'WARNING: reponse method "predict" for scoring classifier with {scorer}')
+
     assert len(set(distance_matrix.columns).intersection(set(X[X.columns[0]].values))) > 0
 
     from bayes_opt import BayesianOptimization
