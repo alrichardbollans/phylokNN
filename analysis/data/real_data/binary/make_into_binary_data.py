@@ -26,6 +26,9 @@ def prepare_MPNS_data() -> pd.DataFrame:
     gentianales_data[['accepted_species', 'Medicinal']].to_csv('binary_gentianales.csv', index=False)
     return gentianales_data
 
+def summarise():
+    df = pd.read_csv('binary_gentianales.csv')
+    df.describe(include='all').to_csv('mpns_gentianales_summary.csv')
 
 def get_an_mcar_sample():
     df = pd.read_csv('binary_gentianales.csv')
@@ -42,10 +45,9 @@ def get_an_mcar_sample():
     print(ratio)
     assert ratio >0.0999 and ratio < 0.1001
 
-    df['accepted_species'] = df['accepted_species'].apply(lambda x: x.replace(' ', '_'))
-
     df.to_csv(os.path.join(out_path, 'mcar_values.csv'), index=False)
 
 if __name__ == '__main__':
     # prepare_MPNS_data()
+    summarise()
     get_an_mcar_sample()
