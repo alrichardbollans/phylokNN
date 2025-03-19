@@ -3,15 +3,17 @@ source(file.path(repo_path, 'phyloKNN', 'analysis', 'imputation','R_continuous_i
 number_of_simulation_iterations = 100
 missingness_types = c('mcar', 'phyloNa')
 
-for(real_or_sim in c('simulations', 'real_data')){
-  for(missing_type in missingness_types){
+for(real_or_sim in c('simulations')){
+  
     if(real_or_sim=='real_data'){
-      tune_binary_params(real_or_sim, 'binary', 1, missing_type)
-      tune_continuous_params(real_or_sim, 'continuous', 1, missing_type)
+      # With real data takes far too long
+      tune_binary_params(real_or_sim, 'binary', 1, 'mcar')
+      tune_continuous_params(real_or_sim, 'continuous', 1, 'mcar')
     }else{
-      for (iter in c(1:number_of_simulation_iterations)) {
-        tune_binary_params(real_or_sim, 'binary', iter, missing_type)
-        tune_continuous_params(real_or_sim, 'continuous', iter, missing_type)
+      for(missing_type in missingness_types){
+        for (iter in c(1:number_of_simulation_iterations)) {
+          tune_binary_params(real_or_sim, 'binary', iter, missing_type)
+          tune_continuous_params(real_or_sim, 'continuous', iter, missing_type)
       }
     }
   }

@@ -82,7 +82,7 @@ tune_continuous_params <- function(real_or_sim, bin_or_cont, iteration, missing_
   
   final_out = format_phylopars(final_phylopars_predictions, plants_to_predict,target)
   
-  dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type))
+  dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
   write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'phylopars.csv'), row.names = FALSE)
   
   param_df = data.frame(best_ev_model=c(best_ev_model))

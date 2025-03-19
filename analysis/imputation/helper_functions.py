@@ -83,7 +83,7 @@ def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_t
 
     elif bin_or_cont == 'binary':
         clf = True
-        val_scorer = make_scorer(nan_safe_metric_wrapper(brier_score_loss), greater_is_better=False)
+        val_scorer = make_scorer(nan_safe_metric_wrapper(brier_score_loss), greater_is_better=False, response_method='predict_proba')
     else:
         raise ValueError(f'Unknown data type {bin_or_cont}')
 

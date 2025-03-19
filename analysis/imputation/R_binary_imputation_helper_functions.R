@@ -167,7 +167,7 @@ tune_binary_params <- function(real_or_sim, bin_or_cont, iteration, missing_type
     
     final_out = subset(final_out, select = c("accepted_species", '0','1'))
     
-    dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type))
+    dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
     write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'corHMM.csv'), row.names = FALSE)
     param_df = data.frame(best_ev_model=c(best_ev_model), best_rate_cat=c(best_rate_cat))
     write.csv(param_df, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'corHMM_hparams.csv'), row.names = FALSE)
