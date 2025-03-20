@@ -17,7 +17,7 @@ format_phylopars <- function(phylopars_predictions,kfold_test_plants, target){
   return(output_data)
 }
 
-tune_continuous_params <- function(real_or_sim, bin_or_cont, iteration, missing_type){
+run_phylopars_models <- function(real_or_sim, bin_or_cont, iteration, missing_type){
   setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
   labelled_tree = setup_$labelled_tree
   if(!ape::is.ultrametric(labelled_tree)){
@@ -36,9 +36,11 @@ tune_continuous_params <- function(real_or_sim, bin_or_cont, iteration, missing_
   best_mae = -1
   best_ev_model = possible_phylopars_models[1]
   for (ev_model in possible_phylopars_models) {
-    
+
     mae_for_this_config = 0
+    number_of_successful_folds = 0
     for (i in 1:number_of_folds) {
+      
       fold_indices <- skfolds[[i]]
       
       kfold_test_plants = non_missing_data[fold_indices,]$accepted_species
@@ -51,21 +53,32 @@ tune_continuous_params <- function(real_or_sim, bin_or_cont, iteration, missing_
       colnames(phylopars_data)[1]  <- "species" #First column name of trait_data MUST be 'species' (all lower case).
       
       phylopars_data = subset(phylopars_data, select = c("species", target))
-      p_v = Rphylopars::phylopars(phylopars_data, training_tree, model = ev_model)
-      phylopars_predictions = p_v$anc_recon
+      ## Catch errors, this can happen for certain ev models (think just kappa)
+      try(
+        {
+          p_v = Rphylopars::phylopars(phylopars_data, training_tree, model = ev_model)
+          
+          phylopars_predictions = p_v$anc_recon
+          
+          out = format_phylopars(phylopars_predictions, kfold_test_plants,target)
+          validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
+          
+          df_merge <- merge(out,validation_data,by="accepted_species")
+          mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
+          mae_for_this_config = mae_for_this_config+mae_for_this_fold
+          number_of_successful_folds = number_of_successful_folds+1
+        }, silent = TRUE
+      )
       
-      out = format_phylopars(phylopars_predictions, kfold_test_plants,target)
-      validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
-      
-      df_merge <- merge(out,validation_data,by="accepted_species")
-      mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
-      mae_for_this_config = mae_for_this_config+mae_for_this_fold
     }
-    mae_for_this_config = mae_for_this_config/number_of_folds
-    if (mae_for_this_config<best_mae || best_mae==-1){
-      best_mae=mae_for_this_config
-      best_ev_model = ev_model
+    if(number_of_successful_folds!=0){
+      mae_for_this_config = mae_for_this_config/number_of_successful_folds
+      if (mae_for_this_config<best_mae || best_mae==-1){
+        best_mae=mae_for_this_config
+        best_ev_model = ev_model
+      }
     }
+    
   }
   
   # Now use best model
