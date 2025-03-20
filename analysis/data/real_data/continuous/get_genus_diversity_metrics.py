@@ -62,6 +62,8 @@ def main():
 def get_an_mcar_sample():
     df = pd.read_csv(os.path.join('outputs', 'group_data', 'Genus.csv'))[['Genus', 'APWD']]
     df = df.rename(columns={'Genus': 'accepted_species'}) # just for compatability with rest of analysis
+    df['accepted_species'] = df['accepted_species'].apply(lambda x: x.replace(' ', '_'))
+
     out_path = '1'
     pathlib.Path(out_path).mkdir(exist_ok=True)
 
@@ -77,10 +79,14 @@ def get_an_mcar_sample():
     assert ratio > 0.0999 and ratio < 0.1001
     df.to_csv(os.path.join(out_path, 'mcar_values.csv'), index=False)
 
-
+def summarise():
+    df = pd.read_csv(os.path.join('outputs', 'group_data', 'Genus.csv'))[['Genus', 'APWD']]
+    df.describe(include='all').to_csv('APWD_gentianales_summary.csv')
 if __name__ == '__main__':
     species_data = pd.read_csv(species_in_study_csv, index_col=0)[
         ['accepted_species', 'Genus']]
 
     # main()
     get_an_mcar_sample()
+
+    summarise()

@@ -32,6 +32,7 @@ def summarise():
 
 def get_an_mcar_sample():
     df = pd.read_csv('binary_gentianales.csv')
+    df['accepted_species'] = df['accepted_species'].apply(lambda x: x.replace(' ', '_'))
     out_path = '1'
     pathlib.Path(out_path).mkdir(exist_ok=True)
     df.to_csv(os.path.join(out_path, 'ground_truth.csv'), index=False)
@@ -49,5 +50,6 @@ def get_an_mcar_sample():
 
 if __name__ == '__main__':
     # prepare_MPNS_data()
-    summarise()
     get_an_mcar_sample()
+    summarise()
+

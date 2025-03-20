@@ -162,6 +162,7 @@ for(i in 1:number_of_repetitions){
   simcontinuousData = generate_continuous_sample()
   target_name = names(simcontinuousData$FinalData)
   # Z-score standardization for the "target" column
+  # so that MAE is comparable across different sets
   simcontinuousData$FinalData[target_name] <- scale(simcontinuousData$FinalData[target_name])
   
   tree = simcontinuousData$TreeList$`1`
