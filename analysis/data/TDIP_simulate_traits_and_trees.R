@@ -37,9 +37,7 @@ rescaleTree <- function(tree, subdata){
 assign("rescaleTree", rescaleTree, envir = asNamespace("TDIP"))
 lockBinding("rescaleTree", asNamespace("TDIP"))
 
-number_of_repetitions = 100
-param_tree <- list(0.4, 0.1, 100) # Values used in Gendre paper
-missingRate <- 0.1
+
 
 dir.create('simulations')
 
@@ -157,7 +155,6 @@ generate_binary_sample <- function(){
   return(out)
 }
 
-
 for(i in 1:number_of_repetitions){
   simcontinuousData = generate_continuous_sample()
   target_name = names(simcontinuousData$FinalData)
@@ -176,4 +173,5 @@ for(i in 1:number_of_repetitions){
   dir.create(file.path('simulations', 'binary'))
   output_simulation(simbinaryData, tree,'binary', i)
 }
+  
 

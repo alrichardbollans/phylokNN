@@ -1,5 +1,9 @@
 library(dplyr)
 
+number_of_repetitions = 100
+param_tree <- list(0.4, 0.1, 100) # Values used in Gendre paper
+missingRate <- 0.1
+
 replace_space_with_underscore_in_name<- function(given_name){
   new = gsub(" ", "_",given_name)
   return(new)
