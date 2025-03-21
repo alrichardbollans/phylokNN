@@ -20,14 +20,19 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
     gt_target_name = ground_truth.columns[0]
     missing_values = missing_values[missing_values[gt_target_name].isna()]
 
-    test_species = missing_values.index.tolist()
     for df in dfs:
         try:
-            assert test_species == df.index.tolist()
+            pd.testing.assert_index_equal(missing_values.index, df.index, check_names=False)
+
         except AssertionError:
-            print(df.index.tolist())
-            print(test_species)
-            raise AssertionError
+            test_species = missing_values.index.tolist()
+            pred_species = df.index.tolist()
+            issues = [c for c in test_species if c not in pred_species]
+            if issues != ['×_Staparesia_meintjesii', '×_Stapvalia_oskopensis']:
+                print(issues)
+                print('##############')
+                print([c for c in pred_species if c not in test_species])
+                raise AssertionError
 
 
 def get_model_names(bin_or_cont):
@@ -83,6 +88,9 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
     for df in dfs:
         full_df = pd.merge(full_df, df, left_index=True, right_index=True)
 
+    issues = full_df[full_df['phylnn_fill_means'].isna()]
+    assert len(issues) == 0
+
     for model_name in model_names:
 
         if bin_or_cont == 'binary':
@@ -92,6 +100,23 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
         out_dict[model_name] = score
     return out_dict
 
+def plot_results(df, model_names, out_dir):
+
+    plot_df = df[model_names]
+    sns.violinplot(data=plot_df, fill=False)
+    plt.ylabel('Loss')
+    plt.savefig(os.path.join(out_dir, 'violin_plot.jpg'), dpi=300)
+    plt.clf()
+    plt.close()
+
+    for model_name in model_names:
+        sns.jointplot(data=df, x='lambda', y=model_name, kind="reg")
+        plt.ylabel(f'{model_name} Loss')
+        plt.xlabel(f'Lambda')
+        plt.tight_layout()
+        plt.savefig(os.path.join(out_dir, f'lambda_vs_{model_name}_loss.jpg'), dpi=300)
+        plt.clf()
+        plt.close()
 
 def collate_simulation_outputs(bin_or_cont: str, missing_type: str):
     full_df = pd.DataFrame()
@@ -118,23 +143,7 @@ def collate_simulation_outputs(bin_or_cont: str, missing_type: str):
     # Save to CSV
     ttest_df.to_csv(os.path.join(out_dir, "ttest_results.csv"))
 
-    plot_df = full_df[model_names]
-    sns.violinplot(data=plot_df, fill=False)
-    plt.ylabel('Loss')
-    plt.savefig(os.path.join(out_dir, 'violin_plot.jpg'), dpi=300)
-    plt.clf()
-    plt.close()
-
-    for model_name in model_names:
-        sns.jointplot(data=full_df, x='lambda', y=model_name, kind="reg")
-        plt.ylabel(f'{model_name} Loss')
-        plt.xlabel(f'Lambda')
-        plt.tight_layout()
-        plt.savefig(os.path.join(out_dir, f'lambda_vs_{model_name}_loss.jpg'), dpi=300)
-        plt.clf()
-        plt.close()
-    # raise NotImplementedError('Need to change number of iteratinos')
-
+    plot_results(full_df, model_names, out_dir)
 
 def main():
     # Simulations
@@ -145,9 +154,13 @@ def main():
 
     # Real_data
     continuous_case = pd.DataFrame(evaluate_output('real_data', 'continuous', 1, 'mcar'), index=['Loss'])
-    continuous_case.to_csv(os.path.join('outputs', 'real_continuous_case.csv'))
-    binary_case = pd.DataFrame(evaluate_output('real_data', 'binary', 1, 'mcar'))
-    binary_case.to_csv(os.path.join('outputs', 'real_binary_case.csv'))
+    out_dir = os.path.join('outputs', 'real_data', 'continuous', 'mcar')
+    pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
+    continuous_case.to_csv(os.path.join(out_dir, 'results.csv'))
+    binary_case = pd.DataFrame(evaluate_output('real_data', 'binary', 1, 'mcar'), index=['Loss'])
+    out_dir = os.path.join('outputs', 'real_data', 'binary', 'mcar')
+    pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
+    binary_case.to_csv(os.path.join(out_dir, 'results.csv'))
 
 if __name__ == '__main__':
     main()
