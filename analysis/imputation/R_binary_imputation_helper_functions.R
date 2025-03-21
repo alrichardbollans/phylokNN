@@ -88,14 +88,23 @@ set_up <- function(real_or_sim, bin_or_cont, iteration, missing_type){
   
   target = names(missing_values)[2]
   non_missing_data = missing_values_with_tree_labels[!is.na(missing_values_with_tree_labels[[target]]),]
-
-  # This does unstratified sampling
-  skfolds = caret::createFolds(non_missing_data[[target]], k=number_of_folds)
+  
+  if(length(unique(non_missing_data[[target]])) == 1) {
+    skfolds =NULL
+    unique_target = unique(non_missing_data[[target]])[1]
+    print(paste('Unique target found for', iteration, unique_target, sep=':'))
+  } else {
+    # This does unstratified sampling
+    skfolds = caret::createFolds(non_missing_data[[target]], k=number_of_folds)
+    unique_target = NULL
+  }
+  
+  
   
   training_tree = get_subset_of_tree_from_data(subset(non_missing_data, select = c("accepted_species")),labelled_tree)
   
   return(list(labelled_tree=labelled_tree, missing_values_with_tree_labels=missing_values_with_tree_labels,
-              target=target, non_missing_data=non_missing_data, skfolds=skfolds, training_tree=training_tree))
+              target=target, non_missing_data=non_missing_data, skfolds=skfolds, training_tree=training_tree, unique_target=unique_target))
 }
 
 calculate_brier <- function(f_t,o_t){
@@ -110,18 +119,18 @@ run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type)
     non_missing_data = setup_$non_missing_data
     skfolds = setup_$skfolds
     training_tree = setup_$training_tree
+    unique_target = setup_$unique_target
     
-    
-    
-    best_brier_score = 1
-    best_rate_cat = possible_rate_cats[1]
-    best_ev_model = possible_corr_ev_models[1]
-    for (rate_cat in possible_rate_cats) {
-      for (ev_model in possible_corr_ev_models) {
-        
-        brier_score_for_this_config = 0
-        number_of_successful_folds = 0
-        for (i in 1:number_of_folds) {
+    if (is.null(unique_target)){
+      best_brier_score = 1
+      best_rate_cat = possible_rate_cats[1]
+      best_ev_model = possible_corr_ev_models[1]
+      for (rate_cat in possible_rate_cats) {
+        for (ev_model in possible_corr_ev_models) {
+          
+          brier_score_for_this_config = 0
+          number_of_successful_folds = 0
+          for (i in 1:number_of_folds) {
             fold_indices <- skfolds[[i]]
             kfold_test_plants = non_missing_data[fold_indices,]$accepted_species
             
@@ -136,52 +145,75 @@ run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type)
             ## Catch errors, this can happen where split means target is uniform value
             try(
               {
-            corHMM_predicted_values = corHMM::corHMM(training_tree, cor_trait_data,model=ev_model,
-                                              rate.cat = 1, get.tip.states = TRUE, n.cores = 10)
-      
-            out = format_corhmm(corHMM_predicted_values, kfold_test_plants, rate_cat)
-            
-            validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
-            
-            df_merge <- merge(out,validation_data,by="accepted_species") 
-            
-            f_t = df_merge$`1`
-            o_t = as.numeric(df_merge[[target]])
-            brier_score_for_this_fold = calculate_brier(f_t,o_t)
-            if(!is.na(brier_score_for_this_fold)){
-              brier_score_for_this_config = brier_score_for_this_config + brier_score_for_this_fold
-              number_of_successful_folds = number_of_successful_folds+1
-            }
-            
+                corHMM_predicted_values = corHMM::corHMM(training_tree, cor_trait_data,model=ev_model,
+                                                         rate.cat = 1, get.tip.states = TRUE, n.cores = 10)
+                
+                out = format_corhmm(corHMM_predicted_values, kfold_test_plants, rate_cat)
+                
+                validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
+                
+                df_merge <- merge(out,validation_data,by="accepted_species") 
+                
+                f_t = df_merge$`1`
+                o_t = as.numeric(df_merge[[target]])
+                brier_score_for_this_fold = calculate_brier(f_t,o_t)
+                if(!is.na(brier_score_for_this_fold)){
+                  brier_score_for_this_config = brier_score_for_this_config + brier_score_for_this_fold
+                  number_of_successful_folds = number_of_successful_folds+1
+                }
+                
               }, silent = TRUE)
-        }
-        if(number_of_successful_folds!=0){
-          brier_score_for_this_config = brier_score_for_this_config/number_of_successful_folds
-          if (brier_score_for_this_config<best_brier_score){
-            best_brier_score=brier_score_for_this_config
-            best_rate_cat = rate_cat
-            best_ev_model = ev_model
           }
+          if(number_of_successful_folds!=0){
+            brier_score_for_this_config = brier_score_for_this_config/number_of_successful_folds
+            if (brier_score_for_this_config<best_brier_score){
+              best_brier_score=brier_score_for_this_config
+              best_rate_cat = rate_cat
+              best_ev_model = ev_model
+            }
+          }
+          
         }
-
-}
+      }
+      
+      final_test_data_with_tree_labels = data.frame(missing_values_with_tree_labels)
+      plants_to_predict = final_test_data_with_tree_labels[is.na(final_test_data_with_tree_labels[[target]]),]$accepted_species
+      # set unknown using '?' for corhmm
+      # corhmm will estimate trait values for all tips in tree that are in trait data with ? value
+      final_test_data_with_tree_labels[[target]][is.na(final_test_data_with_tree_labels[[target]])] = '?'
+      final_cor_trait_data = data.frame(final_test_data_with_tree_labels)
+      final_cor_trait_data = subset(final_cor_trait_data, select = c("accepted_species", target))
+      
+      final_corHMM_predicted_values = corHMM::corHMM(labelled_tree, final_cor_trait_data,model=best_ev_model,
+                                                     rate.cat = best_rate_cat, get.tip.states = TRUE, n.cores = 10)
+      
+      
+      final_out = format_corhmm(final_corHMM_predicted_values, plants_to_predict, best_rate_cat)
+      
+      final_out = subset(final_out, select = c("accepted_species", '0','1'))
+    }else{
+      # Where the target value is unique in the training data, just assign that value to predictions
+      final_test_data_with_tree_labels = data.frame(missing_values_with_tree_labels)
+      final_out = final_test_data_with_tree_labels[is.na(final_test_data_with_tree_labels[[target]]),]
+      
+      if(unique_target==1){
+        final_out[['0']] <- 0
+        final_out[['1']] <- 1
+        
+      }else if(unique_target==0){
+        final_out[['0']] <- 1
+        final_out[['1']] <- 0
+        
+      }else {
+        stop(paste("Unknown unique target for binary case", bin_or_cont))
+      }
+      
+      final_out = subset(final_out, select = c("accepted_species", '0','1'))
+      best_ev_model =NULL
+      best_rate_cat =NULL
     }
     
-    final_test_data_with_tree_labels = data.frame(missing_values_with_tree_labels)
-    plants_to_predict = final_test_data_with_tree_labels[is.na(final_test_data_with_tree_labels[[target]]),]$accepted_species
-    # set unknown using '?' for corhmm
-    # corhmm will estimate trait values for all tips in tree that are in trait data with ? value
-    final_test_data_with_tree_labels[[target]][is.na(final_test_data_with_tree_labels[[target]])] = '?'
-    final_cor_trait_data = data.frame(final_test_data_with_tree_labels)
-    final_cor_trait_data = subset(final_cor_trait_data, select = c("accepted_species", target))
     
-    final_corHMM_predicted_values = corHMM::corHMM(labelled_tree, final_cor_trait_data,model=best_ev_model,
-                                      rate.cat = best_rate_cat, get.tip.states = TRUE, n.cores = 10)
-    
-
-    final_out = format_corhmm(final_corHMM_predicted_values, plants_to_predict, best_rate_cat)
-    
-    final_out = subset(final_out, select = c("accepted_species", '0','1'))
     
     dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
     write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'corHMM.csv'), row.names = FALSE)
@@ -275,65 +307,91 @@ run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type
     possible_picante_methods = c('REML','ML', 'pic')
   }
   
-  
-  best_score = 1
-  best_ev_model = possible_picante_ev_models[1]
-  best_method = possible_picante_methods[1]
-  for (ev_model in possible_picante_ev_models) {
-    for (method in possible_picante_methods){
-      score_for_this_config = 0
-      number_of_successful_folds = 0
-      for (i in 1:number_of_folds) {
-        fold_indices <- skfolds[[i]]
-        kfold_test_plants = non_missing_data[fold_indices,]$accepted_species
-        
-        
-        #### picante
-        try({
-          output_data = run_picante_instance(bin_or_cont, non_missing_data,target,kfold_test_plants,training_tree,ev_model, method)
+  unique_target = setup_$unique_target
+  if (is.null(unique_target)){
+    best_score = 1
+    best_ev_model = possible_picante_ev_models[1]
+    best_method = possible_picante_methods[1]
+    for (ev_model in possible_picante_ev_models) {
+      for (method in possible_picante_methods){
+        score_for_this_config = 0
+        number_of_successful_folds = 0
+        for (i in 1:number_of_folds) {
+          fold_indices <- skfolds[[i]]
+          kfold_test_plants = non_missing_data[fold_indices,]$accepted_species
           
-          validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
           
-          df_merge <- merge(output_data,validation_data,by="accepted_species") 
-          if (bin_or_cont == "binary") {
-            f_t = as.numeric(df_merge$`1`)
-            o_t = as.numeric(df_merge[[target]])
-            brier_score_for_this_fold = calculate_brier(f_t,o_t)
-            if(!is.na(brier_score_for_this_fold)){
-              score_for_this_config = score_for_this_config + brier_score_for_this_fold
-              number_of_successful_folds = number_of_successful_folds+1
-            }}
-          else if (bin_or_cont == "continuous"){
-            mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
-            if(!is.na(mae_for_this_fold)){
-              score_for_this_config = score_for_this_config + mae_for_this_fold
-              number_of_successful_folds = number_of_successful_folds+1
+          #### picante
+          try({
+            output_data = run_picante_instance(bin_or_cont, non_missing_data,target,kfold_test_plants,training_tree,ev_model, method)
+            
+            validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
+            
+            df_merge <- merge(output_data,validation_data,by="accepted_species") 
+            if (bin_or_cont == "binary") {
+              f_t = as.numeric(df_merge$`1`)
+              o_t = as.numeric(df_merge[[target]])
+              brier_score_for_this_fold = calculate_brier(f_t,o_t)
+              if(!is.na(brier_score_for_this_fold)){
+                score_for_this_config = score_for_this_config + brier_score_for_this_fold
+                number_of_successful_folds = number_of_successful_folds+1
+              }}
+            else if (bin_or_cont == "continuous"){
+              mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
+              if(!is.na(mae_for_this_fold)){
+                score_for_this_config = score_for_this_config + mae_for_this_fold
+                number_of_successful_folds = number_of_successful_folds+1
+              }
             }
+            }, silent = TRUE)
+          
+        }
+        if(number_of_successful_folds!=0){
+          score_for_this_config = score_for_this_config/number_of_successful_folds
+          if (score_for_this_config<best_score){
+            best_score=score_for_this_config
+            best_ev_model = ev_model
+            best_method = method
           }
-          }, silent = TRUE)
-        
-      }
-      if(number_of_successful_folds!=0){
-        score_for_this_config = score_for_this_config/number_of_successful_folds
-        if (score_for_this_config<best_score){
-          best_score=score_for_this_config
-          best_ev_model = ev_model
-          best_method = method
         }
       }
+      
+      
     }
     
-    
-  }
+    plants_to_predict = missing_values_with_tree_labels[is.na(missing_values_with_tree_labels[[target]]),]$accepted_species
   
-  plants_to_predict = missing_values_with_tree_labels[is.na(missing_values_with_tree_labels[[target]]),]$accepted_species
-
-  final_out = run_picante_instance(bin_or_cont,missing_values_with_tree_labels,target,plants_to_predict,labelled_tree,
-                                   best_ev_model, best_method)
-  if (bin_or_cont == "binary") {
-    final_out = subset(final_out, select = c("accepted_species", '0','1'))
-  } else if (bin_or_cont == "continuous") {
-    final_out = subset(final_out, select = c("accepted_species", 'estimate'))
+    final_out = run_picante_instance(bin_or_cont,missing_values_with_tree_labels,target,plants_to_predict,labelled_tree,
+                                     best_ev_model, best_method)
+    if (bin_or_cont == "binary") {
+      final_out = subset(final_out, select = c("accepted_species", '0','1'))
+    } else if (bin_or_cont == "continuous") {
+      final_out = subset(final_out, select = c("accepted_species", 'estimate'))
+    }
+  } else{
+    # Where the target value is unique in the training data, just assign that value to predictions
+    if (bin_or_cont == "binary") {
+      final_test_data_with_tree_labels = data.frame(missing_values_with_tree_labels)
+      final_out = final_test_data_with_tree_labels[is.na(final_test_data_with_tree_labels[[target]]),]
+      
+      if(unique_target==1){
+        final_out[['0']] <- 0
+        final_out[['1']] <- 1
+        
+      }else if(unique_target==0){
+        final_out[['0']] <- 1
+        final_out[['1']] <- 0
+        
+      }else {
+        stop(paste("Unknown unique target for binary case", bin_or_cont))
+      }
+      
+      final_out = subset(final_out, select = c("accepted_species", '0','1'))
+      best_ev_model = NULL
+      best_method = NULL
+    } else if (bin_or_cont == "continuous") {
+      stop(paste("Found unique target for continuous case", bin_or_cont))
+    }
   }
   dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
   write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'picante.csv'), row.names = FALSE)
