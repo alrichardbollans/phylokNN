@@ -276,6 +276,7 @@ class PhylNearestNeighbours(BaseEstimator):
             y_pred = data_with_predictions['state'].values.astype(float)
         else:
             y_pred = data_with_predictions['estimate'].values.astype(float)
+        assert len(y_pred) == len(X)
         return y_pred
 
     def predict_proba(self, X: ArrayLike):
@@ -292,6 +293,8 @@ class PhylNearestNeighbours(BaseEstimator):
         data_with_predictions = self._get_data_with_predictions(names)
         data_with_predictions['0'] = 1 - data_with_predictions['estimate']
         T = np.column_stack((data_with_predictions['0'].values, data_with_predictions['estimate'].values)).astype(float)
+        assert len(T) == len(X)
+
         return T
 
     def fill_in_mean_activities(self, prediction_df):
