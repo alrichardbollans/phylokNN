@@ -15,10 +15,15 @@ prediction_path = os.path.join(repo_path, 'phyloKNN', 'analysis', 'imputation')
 number_of_simulation_iterations = 100
 missingness_types = ['mcar', 'phyloNa']
 
+nonstandard_sim_types = {'BMT': 'continuous', 'EB': 'continuous', 'BISSE': 'binary', 'HISSE': 'binary'}
 
-def get_iteration_bath_from_base(base: str, real_or_sim: str, bin_or_cont: str, iteration: int):
+
+def get_iteration_path_from_base(base: str, real_or_sim: str, bin_or_cont: str, iteration: int):
     if real_or_sim == 'real_data' or real_or_sim == 'simulations':
         basepath = os.path.join(base, real_or_sim)
+    elif real_or_sim in nonstandard_sim_types:
+        assert nonstandard_sim_types[real_or_sim] == bin_or_cont
+        basepath = os.path.join(base, 'non_standard_simulations', real_or_sim)
     else:
         raise ValueError('Unknown real or simulation data')
 
@@ -33,11 +38,11 @@ def get_iteration_bath_from_base(base: str, real_or_sim: str, bin_or_cont: str, 
 
 
 def get_input_data_paths(real_or_sim: str, bin_or_cont: str, iteration: int):
-    return get_iteration_bath_from_base(input_data_path, real_or_sim, bin_or_cont, iteration)
+    return get_iteration_path_from_base(input_data_path, real_or_sim, bin_or_cont, iteration)
 
 
 def get_prediction_data_paths(real_or_sim: str, bin_or_cont: str, iteration: int, missingness_type: str):
-    return os.path.join(get_iteration_bath_from_base(prediction_path, real_or_sim, bin_or_cont, iteration), missingness_type)
+    return os.path.join(get_iteration_path_from_base(prediction_path, real_or_sim, bin_or_cont, iteration), missingness_type)
 
 
 def check_data(ground_truth, missing_values):

@@ -9,9 +9,15 @@ source(file.path(repo_path, 'phyloKNN', 'analysis', 'data','helpful_phyl_methods
 input_data_path = file.path(repo_path, 'phyloKNN', 'analysis', 'data')
 prediction_path = file.path(repo_path, 'phyloKNN', 'analysis', 'imputation')
 
+nonstandard_sim_types = c('BMT', 'EB', 'BISSE', 'HISSE')
+
+
 get_iteration_path_from_base <- function(base, real_or_sim, bin_or_cont, iteration) {
   if (real_or_sim == "real_data" || real_or_sim == "simulations") {
     basepath <- file.path(base, real_or_sim)
+  } else if(real_or_sim %in% nonstandard_sim_types){
+    basepath = file.path(base, 'non_standard_simulations', real_or_sim)
+    
   } else {
     stop("Unknown real or simulation data")
   }
@@ -78,7 +84,7 @@ set_up <- function(real_or_sim, bin_or_cont, iteration, missing_type){
       tree = ape::read.tree(file.path(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs', 
                                       'Genus', 'Uphylomaker_genus_tree.tre'))
     }
-  } else if(real_or_sim == "simulations") {
+  } else {
     tree = ape::read.tree(file.path(data_path, 'tree.tre'))
   }
   
