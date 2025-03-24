@@ -1,12 +1,15 @@
 import os
 import pathlib
+from itertools import combinations
+
 import pandas as pd
 from matplotlib import pyplot as plt
 from scipy.stats import ttest_rel
 from sklearn.metrics import brier_score_loss, mean_absolute_error
 import seaborn as sns
 
-from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, number_of_simulation_iterations
+from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, number_of_simulation_iterations, \
+    nonstandard_sim_types
 from phyloKNN import nan_safe_metric_wrapper
 
 
@@ -47,24 +50,35 @@ def get_model_names(bin_or_cont):
 
 def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str):
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
-    if real_or_sim =='simulations':
-        df_params = pd.read_csv(os.path.join(data_path, 'dataframe_params.csv'), index_col=0)
-        lambda_ = df_params['lambda'].iloc[0]
-        evmodel_ = df_params['model'].iloc[0]
-        kappa_ = df_params['kappa'].iloc[0]
-        out_dict = {'lambda': lambda_, 'kappa': kappa_, 'Ev Model': evmodel_}
-        model_names = get_model_names(bin_or_cont)
-    elif real_or_sim == 'real_data':
-        out_dict = {}
+    out_dict = {}
+    if real_or_sim == 'real_data':
+
         model_names = ['phylnn_raw', 'phylnn_fill_means']
+    else:
+        df_params = pd.read_csv(os.path.join(data_path, 'dataframe_params.csv'), index_col=0)
+        try:
+            lambda_ = df_params['lambda'].iloc[0]
+            out_dict['lambda'] = lambda_
+        except KeyError:
+            lambda_ = None
+        try:
+            evmodel_ = df_params['model'].iloc[0]
+        except KeyError:
+            evmodel_ = real_or_sim
+
+        try:
+            kappa_ = df_params['kappa'].iloc[0]
+            out_dict['kappa'] = kappa_
+        except KeyError:
+            kappa_ = None
+        out_dict['Ev Model'] = evmodel_
+        model_names = get_model_names(bin_or_cont)
 
     ground_truth = pd.read_csv(os.path.join(data_path, 'ground_truth.csv'), index_col=0)
     assert len(ground_truth.columns) == 1
     missing_values = pd.read_csv(os.path.join(data_path, f'{missing_type}_values.csv'), index_col=0)
 
     imputation_path = get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type)
-
-
 
     dfs = []
     for model_name in model_names:
@@ -100,8 +114,8 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
         out_dict[model_name] = score
     return out_dict
 
-def plot_results(df, model_names, out_dir):
 
+def plot_results(df, model_names, out_dir):
     plot_df = df[model_names]
     sns.violinplot(data=plot_df, fill=False)
     plt.ylabel('Loss')
@@ -109,22 +123,25 @@ def plot_results(df, model_names, out_dir):
     plt.clf()
     plt.close()
 
-    for model_name in model_names:
-        sns.jointplot(data=df, x='lambda', y=model_name, kind="reg")
-        plt.ylabel(f'{model_name} Loss')
-        plt.xlabel(f'Lambda')
-        plt.tight_layout()
-        plt.savefig(os.path.join(out_dir, f'lambda_vs_{model_name}_loss.jpg'), dpi=300)
-        plt.clf()
-        plt.close()
+    if 'lambda' in df.columns:
 
-def collate_simulation_outputs(bin_or_cont: str, missing_type: str):
+        for model_name in model_names:
+            sns.jointplot(data=df, x='lambda', y=model_name, kind="reg")
+            plt.ylabel(f'{model_name} Loss')
+            plt.xlabel(f'Lambda')
+            plt.tight_layout()
+            plt.savefig(os.path.join(out_dir, f'lambda_vs_{model_name}_loss.jpg'), dpi=300)
+            plt.clf()
+            plt.close()
+
+
+def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str):
     full_df = pd.DataFrame()
-    for tag in range(1, number_of_simulation_iterations + 1):
-        run_dict = evaluate_output('simulations', bin_or_cont, tag, missing_type)
+    for tag in range(1, 7):  # number_of_simulation_iterations + 1):
+        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type)
         run_df = pd.DataFrame(run_dict, index=[tag])
         full_df = pd.concat([full_df, run_df])
-    out_dir = os.path.join('outputs', 'simulations', bin_or_cont, missing_type)
+    out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
     pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
 
     full_df.to_csv(os.path.join(out_dir, 'results.csv'))
@@ -133,10 +150,10 @@ def collate_simulation_outputs(bin_or_cont: str, missing_type: str):
     model_names = get_model_names(bin_or_cont)
 
     ttest_dict = {}
-    for model_name in model_names:
-        for model_name2 in model_names:
-            t_stat, p_value = ttest_rel(full_df[model_name], full_df[model_name2])
-            ttest_dict[f'{model_name}_{model_name2}'] = [t_stat, p_value]
+    for pair in list(combinations(model_names, 2)):
+        model_name1, model_name2 = pair
+        t_stat, p_value = ttest_rel(full_df[model_name1], full_df[model_name2], nan_policy='omit')
+        ttest_dict[f'{model_name1}_{model_name2}'] = [t_stat, p_value]
     # Convert to a DataFrame
     ttest_df = pd.DataFrame(ttest_dict, index=['stat', 'p value'])
 
@@ -145,22 +162,32 @@ def collate_simulation_outputs(bin_or_cont: str, missing_type: str):
 
     plot_results(full_df, model_names, out_dir)
 
+
 def main():
     # Simulations
+    # Need to re run imputation for 2 because I accidentally reran simulations
+    # for m in missingness_types:
+    #     print(m)
+    #     collate_simulation_outputs('simulations','binary', m)
+    #     collate_simulation_outputs('simulations','continuous', m)
+
+    # Nonstandard Simulations
+    # Need to re run imputation for 2 because I accidentally reran simulations
     for m in missingness_types:
-        print(m)
-        collate_simulation_outputs('binary', m)
-        collate_simulation_outputs('continuous', m)
+        for sim_type in nonstandard_sim_types:
+            print(m)
+            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m)
 
     # Real_data
-    continuous_case = pd.DataFrame(evaluate_output('real_data', 'continuous', 1, 'mcar'), index=['Loss'])
-    out_dir = os.path.join('outputs', 'real_data', 'continuous', 'mcar')
-    pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
-    continuous_case.to_csv(os.path.join(out_dir, 'results.csv'))
-    binary_case = pd.DataFrame(evaluate_output('real_data', 'binary', 1, 'mcar'), index=['Loss'])
-    out_dir = os.path.join('outputs', 'real_data', 'binary', 'mcar')
-    pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
-    binary_case.to_csv(os.path.join(out_dir, 'results.csv'))
+    # continuous_case = pd.DataFrame(evaluate_output('real_data', 'continuous', 1, 'mcar'), index=['Loss'])
+    # out_dir = os.path.join('outputs', 'real_data', 'continuous', 'mcar')
+    # pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
+    # continuous_case.to_csv(os.path.join(out_dir, 'results.csv'))
+    # binary_case = pd.DataFrame(evaluate_output('real_data', 'binary', 1, 'mcar'), index=['Loss'])
+    # out_dir = os.path.join('outputs', 'real_data', 'binary', 'mcar')
+    # pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
+    # binary_case.to_csv(os.path.join(out_dir, 'results.csv'))
+
 
 if __name__ == '__main__':
     main()
