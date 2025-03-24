@@ -2,6 +2,7 @@ library(phytools)
 library(ape)
 
 source('helpful_phyl_methods.R')
+source('helper_simulation_methods.R')
 
 get_tree <- function(){
 
@@ -19,7 +20,11 @@ get_BMT_sample <- function(){
   names(trait_BM_trend_scaled) <- names(trait_BM_trend)
   # plot(trait_BM_trend_scaled, ylab="Trait Value", xlab="Species", main="BM with a Trend")
   # phenogram(tree, trait_BM_trend_scaled, fsize=0.8, main="Trait Evolution under BM with a Trend")
-  return(list(tree=tree, traits= trait_BM_trend_scaled))
+  
+  ground_truth = data.frame(trait_BM_trend_scaled)
+  
+  param_dataframe = data.frame(mu=c(mu))
+  return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
 }
 
 get_EB_sample <- function(){
@@ -34,8 +39,15 @@ get_EB_sample <- function(){
   trait_EB <- fastBM(tree, sig2=1, a=0, mu=0, beta=beta)
   trait_EB_scaled = scale(trait_EB)
   names(trait_EB_scaled) <- names(trait_EB)
-  phenogram(tree, trait_EB_scaled, fsize=0.8, main="Early Burst Model")
-  return(list(tree=tree, traits= trait_EB_scaled))
+  
+  ground_truth = data.frame(trait_EB_scaled)
+  
+  
+  param_dataframe = data.frame(beta=c(beta))
+  # phenogram(tree, trait_EB_scaled, fsize=0.8, main="Early Burst Model")
+  
+  
+  return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
 }
 
 get_bisse_sample <- function(){
@@ -56,10 +68,13 @@ get_bisse_sample <- function(){
   # Extract the tree and traits
   tree <- sim_bisse
   traits <- sim_bisse$tip.state
-  traits
-  # Plot the tree with binary trait states
+  
+  
+  
   if (!is.null(tree) && class(tree) == "phylo") {
-    return(list(tree=tree, traits= traits))
+    param_dataframe = data.frame(pars=c(pars))
+    ground_truth = data.frame(traits)
+    return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
   } else {
     get_bisse_sample()
   }
@@ -70,32 +85,49 @@ get_hisse_sample <- function(){
   # 
   # What if different clades evolve at different rates? {hisse} can vary transition rates across different lineages.
   # Example: Two rate classes (fast vs. slow evolving groups)
-
-  simulated.result <- SimulateHisse(c(.3, .1), c(.1, 0), 
-                                    matrix(c(NA, 0.2, .3, NA), nrow=2), max.taxa=param_tree[3], x0=0)
-  hisse_tree = SimToPhylo(simulated.result, include.extinct=FALSE, drop.stem=TRUE)
-  stop('Need to implement parameter randomisation')
-  return(list(tree=hisse_tree, traits= hisse_tree$tip.state))
+  
+  turnover.rates = runif(2, min=0, max=1)
+  eps.values= runif(2, min=0, max=1)
+  transition.rates= matrix(runif(4, min=0, max=1), nrow=2)
+  diag(transition.rates) <- NA
+  
+  simulated.result <- hisse::SimulateHisse(turnover.rates, eps.values, 
+                                           transition.rates, max.taxa=param_tree[[3]], x0=0)
+  hisse_tree = hisse::SimToPhylo(simulated.result, include.extinct=FALSE, drop.stem=TRUE)
+  
+  
+  # # Define colors for binary states
+  # trait_colors <- ifelse(traits == 1, "red", "blue")
+  # 
+  # # Plot tree with colored tip labels
+  # plot(hisse_tree, tip.color = trait_colors, cex = 1.2)
+  
+  if (!is.null(hisse_tree) && class(hisse_tree) == "phylo") {
+    traits = hisse_tree$tip.state
+    traits = traits[match(hisse_tree$tip.label, names(traits))]
+    ground_truth = data.frame(traits)
+    param_dataframe = data.frame(turnover.rates=c(turnover.rates),eps.values=c(eps.values), transition.rates=c(transition.rates))
+    return(list(tree=hisse_tree, FinalData= ground_truth, Dataframe=param_dataframe))
+  } else {
+    get_bisse_sample()
+  }
+  
+  
 }
 
-x= get_hisse_sample()
-
-#PhyloNa
-# the case in which species belonging to particular clades are more 
-# likely to be missing trait data
-missingRate = 0.1
-phyloNa_values <- phyloNa_miss_meca(missingRate = missingRate,
-                                    ds = trait_BM_trend_scaled,
-                                    tree = tree)[[1]]
-#MCAR
-# Missing completely at random (MCAR), where a random sample of data 
-# independent of their values and other traits is missing
-mcar_values <- mcar_miss_meca(missingRate = missingRate,
-                              ds = data.frame(trait_BM_trend_scaled),1)[[1]]
-names(mcar_values) <- names(trait_BM_trend_scaled)
-
-
-
+for(i in 1:number_of_repetitions){
+  BMT_sample = get_BMT_sample()
+  output_simulation(file.path('non_standard_simulations','BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
+  
+  EB_sample = get_EB_sample()
+  output_simulation(file.path('non_standard_simulations','EB'),EB_sample, EB_sample$tree,'continuous', i)
+  
+  bisse_sample = get_bisse_sample()
+  output_simulation(file.path('non_standard_simulations','BISSE'),bisse_sample, bisse_sample$tree,'binary', i)
+  
+  hisse_sample = get_hisse_sample()
+  output_simulation(file.path('non_standard_simulations','HISSE'),hisse_sample, hisse_sample$tree,'binary', i)
+}
 
 
 
