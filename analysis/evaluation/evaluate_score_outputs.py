@@ -3,14 +3,13 @@ import pathlib
 from itertools import combinations
 
 import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
 from scipy.stats import ttest_rel
 from sklearn.metrics import brier_score_loss, mean_absolute_error
-import seaborn as sns
 
-from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, number_of_simulation_iterations, \
-    nonstandard_sim_types
-from phyloKNN import nan_safe_metric_wrapper
+from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, nonstandard_sim_types, \
+    number_of_simulation_iterations
 
 
 def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, missing_values: pd.DataFrame):
@@ -48,7 +47,7 @@ def get_model_names(bin_or_cont):
     return model_names
 
 
-def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str):
+def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str, drop_nans=False):
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
     out_dict = {}
     if real_or_sim == 'real_data':
@@ -105,21 +104,28 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
     issues = full_df[full_df['phylnn_fill_means'].isna()]
     assert len(issues) == 0
 
-    for model_name in model_names:
-
-        if bin_or_cont == 'binary':
-            score = nan_safe_metric_wrapper(brier_score_loss)(full_df[gt_target_name], full_df[model_name])
-        elif bin_or_cont == 'continuous':
-            score = nan_safe_metric_wrapper(mean_absolute_error)(full_df[gt_target_name], full_df[model_name])
-        out_dict[model_name] = score
+    if drop_nans:
+        full_df = full_df[full_df['phylnn_raw'].notna()]
+        pd.testing.assert_series_equal(full_df['phylnn_raw'], full_df['phylnn_fill_means'], check_names=False)
+        full_df = full_df.drop('phylnn_fill_means', axis=1)
+    else:
+        full_df = full_df.drop('phylnn_raw', axis=1)
+    if len(full_df)>0:
+        for model_name in model_names:
+            if model_name in full_df.columns:
+                if bin_or_cont == 'binary':
+                    score = brier_score_loss(full_df[gt_target_name], full_df[model_name])
+                elif bin_or_cont == 'continuous':
+                    score = mean_absolute_error(full_df[gt_target_name], full_df[model_name])
+                out_dict[model_name] = score
     return out_dict
 
 
-def plot_results(df, model_names, out_dir):
+def plot_results(df, model_names, out_dir, tag):
     plot_df = df[model_names]
     sns.violinplot(data=plot_df, fill=False)
     plt.ylabel('Loss')
-    plt.savefig(os.path.join(out_dir, 'violin_plot.jpg'), dpi=300)
+    plt.savefig(os.path.join(out_dir, f'{tag}violin_plot.jpg'), dpi=300)
     plt.clf()
     plt.close()
 
@@ -130,37 +136,42 @@ def plot_results(df, model_names, out_dir):
             plt.ylabel(f'{model_name} Loss')
             plt.xlabel(f'Lambda')
             plt.tight_layout()
-            plt.savefig(os.path.join(out_dir, f'lambda_vs_{model_name}_loss.jpg'), dpi=300)
+            plt.savefig(os.path.join(out_dir, f'{tag}lambda_vs_{model_name}_loss.jpg'), dpi=300)
             plt.clf()
             plt.close()
 
 
-def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str):
+def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False):
     full_df = pd.DataFrame()
-    for tag in range(1, 7):  # number_of_simulation_iterations + 1):
-        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type)
+    for tag in range(1, number_of_simulation_iterations + 1):
+        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans)
         run_df = pd.DataFrame(run_dict, index=[tag])
         full_df = pd.concat([full_df, run_df])
     out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
     pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
 
-    full_df.to_csv(os.path.join(out_dir, 'results.csv'))
-    full_df.describe(include='all').to_csv(os.path.join(out_dir, 'results_summary.csv'))
+    tag = ''
+    if drop_nans:
+        tag= 'raw_'
+
+    full_df.to_csv(os.path.join(out_dir, f'{tag}results.csv'))
+    full_df.describe(include='all').to_csv(os.path.join(out_dir, f'{tag}results_summary.csv'))
 
     model_names = get_model_names(bin_or_cont)
 
     ttest_dict = {}
     for pair in list(combinations(model_names, 2)):
         model_name1, model_name2 = pair
-        t_stat, p_value = ttest_rel(full_df[model_name1], full_df[model_name2], nan_policy='omit')
-        ttest_dict[f'{model_name1}_{model_name2}'] = [t_stat, p_value]
+        if model_name1 in full_df.columns and model_name2 in full_df.columns:
+            t_stat, p_value = ttest_rel(full_df[model_name1], full_df[model_name2], nan_policy='omit')
+            ttest_dict[f'{model_name1}_{model_name2}'] = [t_stat, p_value]
     # Convert to a DataFrame
     ttest_df = pd.DataFrame(ttest_dict, index=['stat', 'p value'])
 
     # Save to CSV
-    ttest_df.to_csv(os.path.join(out_dir, "ttest_results.csv"))
+    ttest_df.to_csv(os.path.join(out_dir, f'{tag}ttest_results.csv'))
 
-    plot_results(full_df, model_names, out_dir)
+    plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir,tag)
 
 
 def main():
@@ -176,7 +187,8 @@ def main():
     for m in missingness_types:
         for sim_type in nonstandard_sim_types:
             print(m)
-            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m)
+            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m,drop_nans=False)
+            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m,drop_nans=True)
 
     # Real_data
     # continuous_case = pd.DataFrame(evaluate_output('real_data', 'continuous', 1, 'mcar'), index=['Loss'])
