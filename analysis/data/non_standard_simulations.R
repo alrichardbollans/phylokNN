@@ -64,12 +64,9 @@ get_bisse_sample <- function(){
   # https://lukejharmon.github.io/ilhabela/2015/07/05/BiSSE-and-HiSSE/
   sim_bisse <- diversitree::tree.bisse(pars, max.taxa=param_tree[3], x0=0)
   
-  # Visualize on tree
   # Extract the tree and traits
   tree <- sim_bisse
   traits <- sim_bisse$tip.state
-  
-  
   
   if (!is.null(tree) && class(tree) == "phylo") {
     param_dataframe = data.frame(pars=c(pars))
@@ -109,7 +106,7 @@ get_hisse_sample <- function(){
     param_dataframe = data.frame(turnover.rates=c(turnover.rates),eps.values=c(eps.values), transition.rates=c(transition.rates))
     return(list(tree=hisse_tree, FinalData= ground_truth, Dataframe=param_dataframe))
   } else {
-    get_bisse_sample()
+    get_hisse_sample()
   }
   
   
@@ -128,6 +125,3 @@ for(i in 1:number_of_repetitions){
   hisse_sample = get_hisse_sample()
   output_simulation(file.path('non_standard_simulations','HISSE'),hisse_sample, hisse_sample$tree,'binary', i)
 }
-
-
-

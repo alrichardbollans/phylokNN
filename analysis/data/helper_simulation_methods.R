@@ -42,7 +42,8 @@ output_simulation <- function(base_output_path, simData, tree, tag,id){
   
   saveRDS(simData, file=file.path(this_sim_path, 'simData.rds'))
   
-  write.csv(update_trait_columns(simData$FinalData), file.path(this_sim_path, 'ground_truth.csv'),row.names = FALSE)
+  ground_truth = update_trait_columns(simData$FinalData)
+  write.csv(ground_truth, file.path(this_sim_path, 'ground_truth.csv'),row.names = FALSE)
   ## Write missing values
   write.csv(update_trait_columns(mcar_values), file.path(this_sim_path, 'mcar_values.csv'),row.names = FALSE)
   saveRDS(mcar_values, file=file.path(this_sim_path, 'mcar_values.rds'))

@@ -23,17 +23,12 @@ get_matching_labels <- function(tree,data){
   # Gets data which appears in tree and appends 'label' column
   # First match by accepted names
   accepted_label_matches <-
-    tree$tip.label %>%
-    tibble::enframe(name=NULL, value="label")%>%
-    rowwise()  %>%
-    mutate(accepted_species=label)%>%
-    right_join(
-      data,
-      by=c("accepted_species"="accepted_species")
-    )
+    data %>%
+    mutate(label = accepted_species) %>%  # Create a copy of 'accepted_species' as 'label'
+    filter(label %in% tree$tip.label)     # Keep only rows where 'label' is in tree$tip.label
   
-  matching_labels = accepted_label_matches$label
-  
+  # matching_labels = accepted_label_matches$label
+  # Then drop any NaNs just in case
   data_with_tree_labels_no_nan = tidyr::drop_na(accepted_label_matches,'label')
   
   return(data_with_tree_labels_no_nan)

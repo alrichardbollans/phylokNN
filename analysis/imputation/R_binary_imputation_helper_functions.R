@@ -369,6 +369,10 @@ run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type
   
     final_out = run_picante_instance(bin_or_cont,missing_values_with_tree_labels,target,plants_to_predict,labelled_tree,
                                      best_ev_model, best_method)
+    
+    # Reorder matrix based on the species_order
+    final_out <- final_out[match(plants_to_predict, final_out[, "accepted_species"]), ]
+    
     if (bin_or_cont == "binary") {
       final_out = subset(final_out, select = c("accepted_species", '0','1'))
     } else if (bin_or_cont == "continuous") {
