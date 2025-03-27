@@ -309,57 +309,61 @@ run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type
     possible_picante_ev_models = c('ARD', 'ER','SYM')
     possible_picante_methods = c('ML') ## Only ML is available for discrete characters. See https://rdrr.io/cran/ape/man/ace.html
   } else if  (bin_or_cont == "continuous"){
-    possible_picante_ev_models = c('BM', 'ER')
+    possible_picante_ev_models = c('BM')#, 'mvOU','OU', "lambda", "kappa", "delta", "EB", "star") #check https://github.com/emmanuelparadis/ape/issues/139
     possible_picante_methods = c('REML','ML', 'pic')
   }
   
   unique_target = setup_$unique_target
   if (is.null(unique_target)){
-    best_score = 1
+    best_score = NULL
     best_ev_model = possible_picante_ev_models[1]
     best_method = possible_picante_methods[1]
     for (ev_model in possible_picante_ev_models) {
       for (method in possible_picante_methods){
-        score_for_this_config = 0
-        number_of_successful_folds = 0
-        for (i in 1:number_of_folds) {
-          fold_indices <- skfolds[[i]]
-          kfold_test_plants = non_missing_data[fold_indices,]$accepted_species
-          
-          
-          #### picante
-          try({
-            output_data = run_picante_instance(bin_or_cont, non_missing_data,target,kfold_test_plants,training_tree,ev_model, method)
+        
+        if (!(method=='pic' && ev_model != "BM")){ #the "pic" method can be used only with model = "BM"
+          score_for_this_config = 0
+          number_of_successful_folds = 0
+          for (i in 1:number_of_folds) {
+            fold_indices <- skfolds[[i]]
+            kfold_test_plants = non_missing_data[fold_indices,]$accepted_species
             
-            validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
             
-            df_merge <- merge(output_data,validation_data,by="accepted_species") 
-            if (bin_or_cont == "binary") {
-              f_t = as.numeric(df_merge$`1`)
-              o_t = as.numeric(df_merge[[target]])
-              brier_score_for_this_fold = calculate_brier(f_t,o_t)
-              if(!is.na(brier_score_for_this_fold)){
-                score_for_this_config = score_for_this_config + brier_score_for_this_fold
-                number_of_successful_folds = number_of_successful_folds+1
-              }}
-            else if (bin_or_cont == "continuous"){
-              mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
-              if(!is.na(mae_for_this_fold)){
-                score_for_this_config = score_for_this_config + mae_for_this_fold
-                number_of_successful_folds = number_of_successful_folds+1
-              }
-            }
+            #### picante
+            try({
+              output_data = run_picante_instance(bin_or_cont, non_missing_data,target,kfold_test_plants,training_tree,ev_model, method)
+              
+              validation_data = non_missing_data[non_missing_data$accepted_species %in% kfold_test_plants,]
+              
+              df_merge <- merge(output_data,validation_data,by="accepted_species") 
+              if (bin_or_cont == "binary") {
+                f_t = as.numeric(df_merge$`1`)
+                o_t = as.numeric(df_merge[[target]])
+                brier_score_for_this_fold = calculate_brier(f_t,o_t)
+                if(!is.na(brier_score_for_this_fold)){
+                  score_for_this_config = score_for_this_config + brier_score_for_this_fold
+                  number_of_successful_folds = number_of_successful_folds+1
+                }} else if (bin_or_cont == "continuous"){
+                  mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
+                  if(!is.na(mae_for_this_fold)){
+                    score_for_this_config = score_for_this_config + mae_for_this_fold
+                    number_of_successful_folds = number_of_successful_folds+1
+                  }
+                }
             }, silent = TRUE)
-          
-        }
-        if(number_of_successful_folds!=0){
-          score_for_this_config = score_for_this_config/number_of_successful_folds
-          if (score_for_this_config<best_score){
-            best_score=score_for_this_config
-            best_ev_model = ev_model
-            best_method = method
+            
+          }
+          if(number_of_successful_folds!=0){
+            score_for_this_config = score_for_this_config/number_of_successful_folds
+            if (is.null(best_score) || score_for_this_config<best_score){
+              best_score=score_for_this_config
+              best_ev_model = ev_model
+              best_method = method
+            }
           }
         }
+        
+        
       }
       
       
