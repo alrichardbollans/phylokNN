@@ -24,31 +24,24 @@ for (iter in c(1:number_of_simulation_iterations)) {
   }
 }
   
-  
-
-
-
-for(real_or_sim in c( 'real_data')){
-  
-    if(real_or_sim=='real_data'){
-      # With real data takes far too long
-      run_picante_models(real_or_sim, 'binary', 1, 'mcar')
-      # run_corHMM_models(real_or_sim, 'binary', 1, 'mcar')
-      # run_phylopars_models(real_or_sim, 'continuous', 1, 'mcar')
-      # run_picante_models(real_or_sim, 'continuous', 1, 'mcar')
-      print('Not implemented')
-    }else{
-      
-        for (iter in c(1:number_of_simulation_iterations)) {
-          print(iter)
-          for(missing_type in missingness_types){
-           
-            run_picante_models(real_or_sim, 'binary', iter, missing_type)
-            run_corHMM_models(real_or_sim, 'binary', iter, missing_type)
-            run_phylopars_models(real_or_sim, 'continuous', iter, missing_type)
-            run_picante_models(real_or_sim, 'continuous', iter, missing_type)
-      }
-    }
+for (iter in c(2:27)){ #1:number_of_simulation_iterations)) {
+  print(iter)
+  for(missing_type in missingness_types){
+    
+    # run_picante_models('simulations', 'binary', iter, missing_type)
+    # run_corHMM_models('simulations', 'binary', iter, missing_type)
+    run_phylopars_models('simulations', 'continuous', iter, missing_type)
+    run_picante_models('simulations', 'continuous', iter, missing_type)
   }
-  
 }
+
+
+
+
+# With real data takes far too long
+run_picante_models('real_data', 'binary', 1, 'mcar')
+# run_corHMM_models('real_data', 'binary', 1, 'mcar')
+# run_phylopars_models('real_data', 'continuous', 1, 'mcar')
+# run_picante_models('real_data', 'continuous', 1, 'mcar')
+print('Not implemented')
+ 

@@ -110,7 +110,7 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
         full_df = full_df.drop('phylnn_fill_means', axis=1)
     else:
         full_df = full_df.drop('phylnn_raw', axis=1)
-    if len(full_df)>0:
+    if len(full_df) > 0:
         for model_name in model_names:
             if model_name in full_df.columns:
                 if bin_or_cont == 'binary':
@@ -152,7 +152,7 @@ def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type:
 
     tag = ''
     if drop_nans:
-        tag= 'raw_'
+        tag = 'raw_'
 
     full_df.to_csv(os.path.join(out_dir, f'{tag}results.csv'))
     full_df.describe(include='all').to_csv(os.path.join(out_dir, f'{tag}results_summary.csv'))
@@ -171,24 +171,26 @@ def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type:
     # Save to CSV
     ttest_df.to_csv(os.path.join(out_dir, f'{tag}ttest_results.csv'))
 
-    plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir,tag)
+    plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, tag)
 
 
 def main():
     # Simulations
     # Need to re run imputation for 2 because I accidentally reran simulations
-    # for m in missingness_types:
-    #     print(m)
-    #     collate_simulation_outputs('simulations','binary', m)
-    #     collate_simulation_outputs('simulations','continuous', m)
+    for m in missingness_types:
+        print(m)
+        collate_simulation_outputs('simulations', 'binary', m, drop_nans=False)
+        collate_simulation_outputs('simulations', 'binary', m, drop_nans=True)
+        collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
+        collate_simulation_outputs('simulations', 'continuous', m, drop_nans=True)
 
     # Nonstandard Simulations
     # Need to re run imputation for 2 because I accidentally reran simulations
     for m in missingness_types:
         for sim_type in nonstandard_sim_types:
             print(m)
-            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m,drop_nans=False)
-            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m,drop_nans=True)
+            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m, drop_nans=False)
+            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m, drop_nans=True)
 
     # Real_data
     # continuous_case = pd.DataFrame(evaluate_output('real_data', 'continuous', 1, 'mcar'), index=['Loss'])
