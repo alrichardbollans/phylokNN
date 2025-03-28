@@ -31,10 +31,10 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
             pred_species = df.index.tolist()
             issues = [c for c in test_species if c not in pred_species]
             if issues != ['×_Staparesia_meintjesii', '×_Stapvalia_oskopensis']:
-                print(issues)
-                print('##############')
-                print([c for c in pred_species if c not in test_species])
-                raise AssertionError
+                # print(issues)
+                # print('##############')
+                # print([c for c in pred_species if c not in test_species])
+                raise AssertionError(f'Model issue {df.columns[0]}')
 
 
 def get_model_names(bin_or_cont):
@@ -89,8 +89,10 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
             assert len(model_df.columns) == 1
         model_df.columns = [model_name]
         dfs.append(model_df)
-
-    check_prediction_data(dfs, ground_truth, missing_values)
+    try:
+        check_prediction_data(dfs, ground_truth, missing_values)
+    except AssertionError as m:
+        raise AssertionError(f'{m}. Issue with {real_or_sim}: str, {bin_or_cont}: str, {iteration}: int, {missing_type}. ')
 
     gt_target_name = ground_truth.columns[0]
     missing_values = missing_values[missing_values[gt_target_name].isna()]
@@ -176,7 +178,7 @@ def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type:
 
 def main():
     # Simulations
-    # Need to re run imputation for 2 because I accidentally reran simulations
+    print('Simulations')
     for m in missingness_types:
         print(m)
         collate_simulation_outputs('simulations', 'binary', m, drop_nans=False)
@@ -184,11 +186,12 @@ def main():
         collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
         collate_simulation_outputs('simulations', 'continuous', m, drop_nans=True)
 
+    print('Nonstandard Simulations')
     # Nonstandard Simulations
-    # Need to re run imputation for 2 because I accidentally reran simulations
     for m in missingness_types:
+        print(m)
         for sim_type in nonstandard_sim_types:
-            print(m)
+
             collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m, drop_nans=False)
             collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m, drop_nans=True)
 
