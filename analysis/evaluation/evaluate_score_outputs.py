@@ -39,7 +39,7 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
 
 def get_model_names(bin_or_cont):
     if bin_or_cont == 'binary':
-        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means']
+        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means', 'logit_umap', 'logit_eigenvecs']
     elif bin_or_cont == 'continuous':
         model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means']
     else:
