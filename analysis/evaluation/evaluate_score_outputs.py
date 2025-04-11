@@ -39,9 +39,9 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
 
 def get_model_names(bin_or_cont):
     if bin_or_cont == 'binary':
-        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means', 'logit_umap', 'logit_eigenvecs']
+        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means', 'logit_umap', 'logit_eigenvecs', 'xgb_umap', 'xgb_eigenvecs']
     elif bin_or_cont == 'continuous':
-        model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means']
+        model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means', 'linear_umap', 'linear_eigenvecs', 'xgb_umap', 'xgb_eigenvecs']
     else:
         raise ValueError(f'Unknown data type {bin_or_cont}')
     return model_names
@@ -126,7 +126,9 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
 def plot_results(df, model_names, out_dir, tag):
     plot_df = df[model_names]
     sns.violinplot(data=plot_df, fill=False)
+    plt.xticks(rotation=30, ha='right')
     plt.ylabel('Loss')
+    plt.tight_layout()
     plt.savefig(os.path.join(out_dir, f'{tag}violin_plot.jpg'), dpi=300)
     plt.clf()
     plt.close()
@@ -135,6 +137,7 @@ def plot_results(df, model_names, out_dir, tag):
 
         for model_name in model_names:
             sns.jointplot(data=df, x='lambda', y=model_name, kind="reg")
+            plt.xticks(rotation=30, ha='right')
             plt.ylabel(f'{model_name} Loss')
             plt.xlabel(f'Lambda')
             plt.tight_layout()

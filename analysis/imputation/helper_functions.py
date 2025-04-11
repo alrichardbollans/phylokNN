@@ -17,6 +17,7 @@ missingness_types = ['mcar', 'phyloNa']
 
 nonstandard_sim_types = {'BMT': 'continuous', 'EB': 'continuous', 'BISSE': 'binary', 'HISSE': 'binary'}
 
+n_split_for_nested_cv = 5
 
 def get_iteration_path_from_base(base: str, real_or_sim: str, bin_or_cont: str, iteration: int):
     if real_or_sim == 'real_data' or real_or_sim == 'simulations':
@@ -119,7 +120,7 @@ def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_t
     best_ratio, best_kappa = phyloNN_bayes_opt(
         distance_df,
         clf=clf,
-        scorer=val_scorer, cv=KFold(n_splits=5, shuffle=True, random_state=42), X=train, y=train[target_name].values, njobs=njobs, verbose=verbose)
+        scorer=val_scorer, cv=KFold(n_splits=n_split_for_nested_cv, shuffle=True, random_state=42), X=train, y=train[target_name].values, njobs=njobs, verbose=verbose)
 
     best_phyln_fill_means = PhylNearestNeighbours(distance_df, clf, ratio_max_branch_length=best_ratio, kappa=best_kappa,
                                                   fill_in_unknowns_with_mean=True)
