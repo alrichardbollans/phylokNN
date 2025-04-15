@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import umap
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.metrics import brier_score_loss, mean_absolute_error
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, KFold
@@ -8,6 +9,8 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from xgboost import XGBClassifier, XGBRegressor
 
+from analysis.data.encoding_evaluation_methods import tsne_plot
+from analysis.data.umapping import reduction_factor
 from analysis.imputation.helper_functions import number_of_simulation_iterations, missingness_types, get_input_data_paths, \
     get_prediction_data_paths, n_split_for_nested_cv
 
@@ -101,6 +104,28 @@ def get_umap_data(real_or_sim, bin_or_cont, iteration):
     return X
 
 
+def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingness):
+    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
+
+    distances = pd.read_csv(os.path.join(data_path, 'tree_distances.csv'), index_col=0)
+
+    full_df, encoding_vars, target_name = add_y_to_data(distances, real_or_sim, bin_or_cont, iteration, missingness)
+
+    scaled_penguin_data = StandardScaler().fit_transform(full_df[encoding_vars])
+    fitter = umap.UMAP(n_components=int(len(distances.columns) * reduction_factor))
+
+    fitter.fit(scaled_penguin_data, y=full_df[target_name].fillna(-1, inplace=False).values)# give NaNs a label of -1
+    embedding = fitter.transform(scaled_penguin_data)
+
+    X = pd.DataFrame(embedding, index=distances.index)
+    out_df = pd.DataFrame(StandardScaler().fit_transform(X), index=X.index, columns=X.columns)
+    out_df[target_name] = full_df[target_name]
+
+    encoding_vars = [c for c in out_df.columns if c != target_name]
+    tsne_plot(out_df,encoding_vars, target_name, os.path.join(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missingness), 'supervised_umap.png'))
+    return out_df, encoding_vars, target_name
+
+
 def get_eigenvectors(real_or_sim, bin_or_cont, iteration):
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
     X = pd.read_csv(os.path.join(data_path, 'all_eigenvectors.csv'), index_col=0)
@@ -150,6 +175,19 @@ def run_predictions():
                         clf_instance = XGBClassifier(**xgb_clf_init_kwargs)
                         fit_and_output(clf_instance, xgb_clf_grid_search_params, out_dir, 'xgb_eigenvecs', eigen_df, eigen_encoding_vars,
                                        eigen_target_name, bin_or_cont)
+
+                        ### Supervised umap
+                        semi_supervised_umap_df, semi_sup_umap_encoding_vars, semi_sup_umap_target_name = get_semi_supervised_umap_data(real_or_sim,
+                                                                                                                                        bin_or_cont,
+                                                                                                                                        iteration, m)
+                        clf_instance = LogisticRegression(**logit_init_kwargs)
+                        fit_and_output(clf_instance, logit_grid_search_params, out_dir, 'logit_umap_supervised', semi_supervised_umap_df,
+                                       semi_sup_umap_encoding_vars,
+                                       semi_sup_umap_target_name, bin_or_cont)
+                        clf_instance = XGBClassifier(**xgb_clf_init_kwargs)
+                        fit_and_output(clf_instance, xgb_clf_grid_search_params, out_dir, 'xgb_umap_supervised', semi_supervised_umap_df,
+                                       semi_sup_umap_encoding_vars,
+                                       semi_sup_umap_target_name, bin_or_cont)
                     elif bin_or_cont == 'continuous':
                         clf_instance = LinearRegression(**linear_init_kwargs)
                         fit_and_output(clf_instance, linear_grid_search_params, out_dir, 'linear_umap', umap_df, umap_encoding_vars, umap_target_name,
