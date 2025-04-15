@@ -40,10 +40,10 @@ def supervised(dir_path: str, reduction_fraction=reduction_factor):
 def main():
     for tag in tqdm(range(1, number_of_simulation_iterations + 1)):
         for var_type in ['binary', 'continuous']:
-            # dir_path = os.path.join(input_data_path, 'simulations', var_type, str(tag))
-            #
-            # umap_embedding = unsupervised(dir_path)
-            # umap_embedding.to_csv(os.path.join(dir_path, 'umap_unsupervised_embedding.csv'))
+            dir_path = os.path.join(input_data_path, 'simulations', var_type, str(tag))
+
+            umap_embedding = unsupervised(dir_path)
+            umap_embedding.to_csv(os.path.join(dir_path, 'umap_unsupervised_embedding.csv'))
 
             if var_type == 'continuous':
                 for ns in ['BMT', 'EB']:

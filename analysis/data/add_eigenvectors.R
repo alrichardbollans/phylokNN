@@ -10,6 +10,7 @@ decompose_tree <- function(sim_folder){
   # use the Broken Stick method to select the eigenvectors
   # Discussed in Diniz-Filho, J. A. F., Sant'Ana, C. E. R. d., & Bini, L. M. (1998). An Eigenvector Method for Estimating Phylogenetic Inertia. Evolution, 52(5), 1247-1262. https://doi.org/10.2307/2411294
   # Original citation Jackson, Donald A. "Stopping rules in principal components analysis: a comparison of heuristical and statistical approaches." Ecology 74.8 (1993): 2204-2214.
+  # The code calculates Broken Stick values cumulatively in reverse order (e.g., for j=1, it sums the last eigenvalue's expected variance). Sorting these values in decreasing order coincidentally aligns them with the correct order.
   eigenvalues <- eigenValue.df$pvrd.Eigen.values
   number_eigenvalues <- length(eigenvalues)
   broken_stick_model_df <- data.frame(j=seq(1:number_eigenvalues), p=0)
