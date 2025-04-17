@@ -123,8 +123,8 @@ def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingne
     out_df[target_name] = full_df[target_name]
 
     encoding_vars = [c for c in out_df.columns if c != target_name]
-    tsne_plot(out_df, encoding_vars, target_name,
-              os.path.join(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missingness), 'supervised_umap.png'))
+    # tsne_plot(out_df, encoding_vars, target_name,
+    #           os.path.join(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missingness), 'supervised_umap.png'))
     return out_df, encoding_vars, target_name
 
 
@@ -147,21 +147,21 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
 
     distances = pd.read_csv(os.path.join(data_path, 'tree_distances.csv'), index_col=0)
 
-    full_df, encoding_vars, target_name = add_y_to_data(distances, real_or_sim, bin_or_cont, iteration, missingness)
+    full_df, distance_vars, target_name = add_y_to_data(distances, real_or_sim, bin_or_cont, iteration, missingness)
 
     majority_class = full_df[target_name].mode()[0]
-    train_data = full_df[full_df[target_name] == majority_class][encoding_vars]
+    train_data = full_df[full_df[target_name] == majority_class][distance_vars]
 
     encoder_model, encoded_train = autoencode_pairwise_distances(train_data, reduction_fraction=reduction_factor)
-    embedding = encoder_model.predict(full_df[encoding_vars])
+    embedding = encoder_model.predict(full_df[distance_vars])
 
     X = pd.DataFrame(embedding, index=distances.index)
     out_df = pd.DataFrame(StandardScaler().fit_transform(X), index=X.index, columns=X.columns)
     out_df[target_name] = full_df[target_name]
 
     encoding_vars = [c for c in out_df.columns if c != target_name]
-    tsne_plot(out_df, encoding_vars, target_name,
-              os.path.join(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missingness), 'supervised_autoenc.png'))
+    # tsne_plot(out_df, encoding_vars, target_name,
+    #           os.path.join(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missingness), 'supervised_autoenc.png'))
     return out_df, encoding_vars, target_name
 
 
@@ -218,7 +218,7 @@ def run_predictions():
                         fit_and_output(clf_instance, xgb_clf_grid_search_params, out_dir, 'xgb_eigenvecs', eigen_df, eigen_encoding_vars,
                                        eigen_target_name, bin_or_cont)
                         #
-                        # ### Semisupervised umap
+                        # # ### Semisupervised umap
                         semi_supervised_umap_df, semi_sup_umap_encoding_vars, semi_sup_umap_target_name = get_semi_supervised_umap_data(real_or_sim,
                                                                                                                                         bin_or_cont,
                                                                                                                                         iteration, m)
@@ -230,7 +230,7 @@ def run_predictions():
                         fit_and_output(clf_instance, xgb_clf_grid_search_params, out_dir, 'xgb_umap_supervised', semi_supervised_umap_df,
                                        semi_sup_umap_encoding_vars,
                                        semi_sup_umap_target_name, bin_or_cont)
-                        #
+
                         # ### autoencoder
                         clf_instance = LogisticRegression(**logit_init_kwargs)
                         fit_and_output(clf_instance, logit_grid_search_params, out_dir, 'logit_autoencoded', autoenc_df, autoenc_encoding_vars,

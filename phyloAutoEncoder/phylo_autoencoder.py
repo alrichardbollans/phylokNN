@@ -8,7 +8,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
 
-def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fraction: float, _output_dir: str=None, plot=False):
+def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fraction: float, _output_dir: str = None, plot=False):
     # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # If  want to use CPU as GPU doesn't have enough memory
 
     _early_stopping = callbacks.EarlyStopping(
@@ -49,46 +49,20 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
 
     # Compile the model
     autoencoder.compile(optimizer='adam', loss='mse')
-    if plot:
-        keras.utils.plot_model(autoencoder, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder.png'), show_shapes=True,
-                               show_dtype=True,
-                               show_layer_names=True,
-                               rankdir='TB',
-                               expand_nested=True,
-                               dpi=300
-                               )
 
     X_train, X_val = train_test_split(distance_data, test_size=0.2)
 
     # Train the model
     # the task is to encode the given dataset.
-    history = autoencoder.fit(X_train, X_train, callbacks=[_early_stopping], epochs=500,
+    history = autoencoder.fit(X_train, X_train, callbacks=[_early_stopping], epochs=1000,
                               batch_size=32, shuffle=True,
                               validation_data=(X_val, X_val), verbose=0)
-    if plot:
-
-        # Plot the learning progression
-        plt.plot(history.history['loss'], label='train_loss')
-        plt.plot(history.history['val_loss'], label='val_loss')
-        plt.title('Autoencoder Training Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.savefig(os.path.join(_output_dir, 'phylogeny_autoencoder_training_loss.png'))
 
     # predicted_X_val = autoencoder.predict(X_val)
 
     # Define encoder model
     encoder_model = keras.Model(inputs=autoencoder.layers[0].input, outputs=autoencoder.get_layer('encoder').output)
-    if plot:
 
-        keras.utils.plot_model(encoder_model, to_file=os.path.join(_output_dir, 'phylogeny_encoder.png'), show_shapes=True,
-                               show_dtype=True,
-                               show_layer_names=True,
-                               rankdir='TB',
-                               expand_nested=True,
-                               dpi=300
-                               )
     encoded = encoder_model.predict(distance_data)
 
     ### Outputs
@@ -98,13 +72,41 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
         mean_example = distance_data.mean().to_frame().T
         full_mean_df = pd.concat([mean_example] * len(distance_data.index), ignore_index=True)
         mean_loss = mean_squared_error(distance_data, full_mean_df)
-        baseline_df = pd.DataFrame([[mean_loss, best_train_loss, best_val_loss, encoding_dim]],
-                                   columns=['Baseline mse', 'train_loss', 'val_loss', 'latent space size'])
+        baseline_df = pd.DataFrame([[mean_loss, best_train_loss, best_val_loss, len(history.history['loss']), encoding_dim]],
+                                   columns=['Baseline mse', 'train_loss', 'val_loss', 'number_of_epochs', 'latent space size'])
         baseline_df.to_csv(os.path.join(_output_dir, 'autoencoder_metrics.csv'))
-    return encoder_model, pd.DataFrame(encoded, index=distance_data.index)
 
+        if plot:
+            ## Display of the model
+            keras.utils.plot_model(autoencoder, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder.png'), show_shapes=True,
+                                   show_dtype=True,
+                                   show_layer_names=True,
+                                   rankdir='TB',
+                                   expand_nested=True,
+                                   dpi=300
+                                   )
+
+            # Plot the learning progression
+            plt.plot(history.history['loss'], label='train_loss')
+            plt.plot(history.history['val_loss'], label='val_loss')
+            plt.title('Autoencoder Training Loss')
+            plt.xlabel('Epoch')
+            plt.ylabel('Loss')
+            plt.legend()
+            plt.savefig(os.path.join(_output_dir, 'phylogeny_autoencoder_training_loss.png'))
+
+            ## Display of the encoder
+            keras.utils.plot_model(encoder_model, to_file=os.path.join(_output_dir, 'phylogeny_encoder.png'), show_shapes=True,
+                                   show_dtype=True,
+                                   show_layer_names=True,
+                                   rankdir='TB',
+                                   expand_nested=True,
+                                   dpi=300
+                                   )
+
+    return encoder_model, pd.DataFrame(encoded, index=distance_data.index)
 
 
 if __name__ == '__main__':
     example_data = pd.read_csv('../analysis/data/simulations/binary/1/tree_distances.csv', index_col=0)
-    autoencode_pairwise_distances(example_data,0.1, 'example_out', plot=True)
+    autoencode_pairwise_distances(example_data, 0.1, 'example_out', plot=True)

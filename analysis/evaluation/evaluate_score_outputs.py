@@ -36,12 +36,15 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
                 # print([c for c in pred_species if c not in test_species])
                 raise AssertionError(f'Model issue {df.columns[0]}')
 
-
 def get_model_names(bin_or_cont):
     if bin_or_cont == 'binary':
-        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means', 'logit_umap', 'logit_eigenvecs', 'xgb_umap', 'xgb_eigenvecs']
+        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
+                       'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded', 'logit_autoenc_supervised',
+                       'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised','xgb_autoencoded', 'xgb_autoenc_supervised']
     elif bin_or_cont == 'continuous':
-        model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means', 'linear_umap', 'linear_eigenvecs', 'xgb_umap', 'xgb_eigenvecs']
+        model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
+                       'linear_eigenvecs', 'linear_umap','linear_autoencoded',
+                       'xgb_eigenvecs', 'xgb_umap','xgb_autoencoded']
     else:
         raise ValueError(f'Unknown data type {bin_or_cont}')
     return model_names
@@ -146,13 +149,8 @@ def plot_results(df, model_names, out_dir, tag):
             plt.close()
 
 
-def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False):
-    full_df = pd.DataFrame()
-    for tag in range(1, number_of_simulation_iterations + 1):
-        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans)
-        run_df = pd.DataFrame(run_dict, index=[tag])
-        full_df = pd.concat([full_df, run_df])
-    out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
+def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool):
+    full_df = full_df.reset_index(drop=True)
     pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
 
     tag = ''
@@ -179,35 +177,63 @@ def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type:
     plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, tag)
 
 
-def main():
-    # Simulations
-    print('Simulations')
+def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False):
+    full_df = pd.DataFrame()
+    for tag in range(1, number_of_simulation_iterations + 1):
+        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans)
+        run_df = pd.DataFrame(run_dict, index=[tag])
+        full_df = pd.concat([full_df, run_df])
+    out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
+
+    output_results_from_df(full_df, out_dir, bin_or_cont, drop_nans)
+
+    return full_df
+
+
+def evaluate_all_combinations():
+    binary_df = pd.DataFrame()
+
+    cont_df = pd.DataFrame()
+
     for m in missingness_types:
+        all_missing_bin_df = pd.DataFrame()
+        all_missing_cont_df = pd.DataFrame()
         print(m)
-        collate_simulation_outputs('simulations', 'binary', m, drop_nans=False)
+        bin_false_df = collate_simulation_outputs('simulations', 'binary', m, drop_nans=False)
         collate_simulation_outputs('simulations', 'binary', m, drop_nans=True)
-        collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
+
+        binary_df = pd.concat([binary_df, bin_false_df])
+        all_missing_bin_df = pd.concat([all_missing_bin_df, bin_false_df])
+
+        cont_false_df =collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
         collate_simulation_outputs('simulations', 'continuous', m, drop_nans=True)
 
-    print('Nonstandard Simulations')
-    # Nonstandard Simulations
-    for m in missingness_types:
-        print(m)
+        cont_df = pd.concat([cont_df, cont_false_df])
+        all_missing_cont_df = pd.concat([all_missing_cont_df, cont_false_df])
+
+
+
+        # Nonstandard Simulations
         for sim_type in nonstandard_sim_types:
+            bin_or_cont = nonstandard_sim_types[sim_type]
+            m_false_df = collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=False)
+            collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=True)
 
-            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m, drop_nans=False)
-            collate_simulation_outputs(sim_type, nonstandard_sim_types[sim_type], m, drop_nans=True)
+            if bin_or_cont == 'binary':
+                binary_df = pd.concat([binary_df, m_false_df])
+                all_missing_bin_df = pd.concat([all_missing_bin_df, m_false_df])
 
-    # Real_data
-    # continuous_case = pd.DataFrame(evaluate_output('real_data', 'continuous', 1, 'mcar'), index=['Loss'])
-    # out_dir = os.path.join('outputs', 'real_data', 'continuous', 'mcar')
-    # pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
-    # continuous_case.to_csv(os.path.join(out_dir, 'results.csv'))
-    # binary_case = pd.DataFrame(evaluate_output('real_data', 'binary', 1, 'mcar'), index=['Loss'])
-    # out_dir = os.path.join('outputs', 'real_data', 'binary', 'mcar')
-    # pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
-    # binary_case.to_csv(os.path.join(out_dir, 'results.csv'))
+            if bin_or_cont == 'continuous':
+                cont_df = pd.concat([cont_df, m_false_df])
+                all_missing_cont_df = pd.concat([all_missing_cont_df, m_false_df])
+
+        output_results_from_df(all_missing_bin_df, os.path.join('outputs', f'{m}_binary'), 'binary', drop_nans=False)
+        output_results_from_df(all_missing_cont_df, os.path.join('outputs', f'{m}_continuous'), 'continuous', drop_nans=False)
+
+    output_results_from_df(binary_df, os.path.join('outputs', 'binary'), 'binary', drop_nans=False)
+
+    output_results_from_df(cont_df, os.path.join('outputs', 'continuous'), 'continuous', drop_nans=False)
 
 
 if __name__ == '__main__':
-    main()
+    evaluate_all_combinations()

@@ -13,10 +13,10 @@ def ttests(eval_dir:str):
         # if test_results[c].loc['p value']<_alpha:
             significant_cases.append([c, test_results[c].loc['stat'],test_results[c].loc['p value']])
 
-    raw_test_results = pd.read_csv(os.path.join(eval_dir, 'raw_ttest_results.csv'), index_col=0)
-    for c in raw_test_results.columns:
-        # if raw_test_results[c].loc['p value']<_alpha:
-            significant_cases.append([c, raw_test_results[c].loc['stat'],raw_test_results[c].loc['p value']])
+    # raw_test_results = pd.read_csv(os.path.join(eval_dir, 'raw_ttest_results.csv'), index_col=0)
+    # for c in raw_test_results.columns:
+    #     # if raw_test_results[c].loc['p value']<_alpha:
+    #         significant_cases.append([c, raw_test_results[c].loc['stat'],raw_test_results[c].loc['p value']])
 
     return pd.DataFrame(significant_cases, columns=['models', 'stat', 'p value'])
 
@@ -37,36 +37,17 @@ def hochberg_correction(df: pd.DataFrame, p_value_col: str):
     return new_df
 
 def summarise_ttests():
-    full_df = pd.DataFrame()
-    for m in missingness_types:
-        print(m)
-        out_dir = os.path.join('outputs', 'simulations', 'binary', m)
-        bin_cases = ttests(out_dir)
-        bin_cases['variable'] = 'binary'
-        out_dir = os.path.join('outputs', 'simulations', 'continuous', m)
-        continuous_cases = ttests(out_dir)
-        continuous_cases['variable'] = 'continuous'
 
-        missing_type_df = pd.concat([bin_cases, continuous_cases], ignore_index=True)
-        missing_type_df['case'] = 'Standard Simulations'
+    bin_cases = ttests(os.path.join('outputs', 'binary'))
+    bin_cases['variable'] = 'binary'
+    bin_df = hochberg_correction(bin_cases, p_value_col='p value')
+    bin_df.to_csv(os.path.join('outputs', 'binary_ttest_summary.csv'))
 
 
-        for sim_type in nonstandard_sim_types:
-            ns_out_dir = os.path.join('outputs', sim_type, nonstandard_sim_types[sim_type], m)
-            ns_cases = ttests(ns_out_dir)
-            ns_cases['variable'] = nonstandard_sim_types[sim_type]
-
-            ns_cases['case'] = sim_type
-
-            missing_type_df = pd.concat([missing_type_df, ns_cases], ignore_index=True)
-
-
-        missing_type_df['missing type'] = m
-        full_df = pd.concat([full_df, missing_type_df])
-
-
-    full_df  = hochberg_correction(full_df, p_value_col='p value')
-    full_df.to_csv(os.path.join('outputs', 'summarised_ttest_results.csv'))
+    continuous_cases = ttests(os.path.join('outputs', 'continuous'))
+    continuous_cases['variable'] = 'continuous'
+    continuous_df = hochberg_correction(continuous_cases, p_value_col='p value')
+    continuous_df.to_csv(os.path.join('outputs', 'continuous_ttest_summary.csv'))
 
 if __name__ == '__main__':
     summarise_ttests()
