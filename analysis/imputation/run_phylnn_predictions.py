@@ -4,17 +4,12 @@ from analysis.imputation.helper_functions import phylnn_predict, number_of_simul
 
 
 def main():
-    # Simulations
-    # for m in missingness_types:
-    #     for tag in tqdm(range(1, number_of_simulation_iterations+1)):
-    #
-    #             phylnn_predict('simulations', 'continuous', tag, m)
-    #
-    #             phylnn_predict('simulations', 'binary', tag, m)
-
-    # Non standard Simulations
     for m in missingness_types:
         for tag in tqdm(range(1, number_of_simulation_iterations + 1)):
+            phylnn_predict('simulations', 'continuous', tag, m)
+
+            phylnn_predict('simulations', 'binary', tag, m)
+
             phylnn_predict('BMT', 'continuous', tag, m)
             phylnn_predict('EB', 'continuous', tag, m)
 
@@ -22,9 +17,5 @@ def main():
             phylnn_predict('HISSE', 'binary', tag, m)
 
 
-    # real data
-    # phylnn_predict('real_data', 'continuous', 1, 'mcar')
-    #
-    # phylnn_predict('real_data', 'binary', 1, 'mcar')
 if __name__ == '__main__':
     main()

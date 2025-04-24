@@ -80,18 +80,18 @@ get_bisse_sample <- function(){
 get_hisse_sample <- function(){
   # Heterogeneous Transition Rate Models
   # 
-  # What if different clades evolve at different rates? {hisse} can vary transition rates across different lineages.
-  # Example: Two rate classes (fast vs. slow evolving groups)
-  
-  turnover.rates = runif(2, min=0, max=1)
-  eps.values= runif(2, min=0, max=1)
-  transition.rates= matrix(runif(4, min=0, max=1), nrow=2)
+  # a HiSSE model with 1 hidden binary trait (2 hidden states) and 1 observed binary trait (2 observed states), totaling 4 states. 
+  # This allows for interactions between hidden and observed traits in diversification rates.
+  # For 4 states (e.g., 0A, 0B, 1A, 1B), define:
+  turnover.rates <- runif(4, min = 0, max = 1)  # λ + μ for each of 4 states
+  eps.values <- runif(4, min = 0, max = 1)      # μ/λ ratios for each state
+  transition.rates <- matrix(runif(16, min = 0, max = 1), nrow = 4)  # 12 transitions (4x4 - 4 diagonals)
   diag(transition.rates) <- NA
   
   simulated.result <- hisse::SimulateHisse(turnover.rates, eps.values, 
                                            transition.rates, max.taxa=param_tree[[3]], x0=0)
   hisse_tree = hisse::SimToPhylo(simulated.result, include.extinct=FALSE, drop.stem=TRUE)
-  
+
   
   # # Define colors for binary states
   # trait_colors <- ifelse(traits == 1, "red", "blue")
@@ -100,6 +100,16 @@ get_hisse_sample <- function(){
   # plot(hisse_tree, tip.color = trait_colors, cex = 1.2)
   
   if (!is.null(hisse_tree) && class(hisse_tree) == "phylo") {
+    # Convert states back into observed binary character
+    # Extract tip states (0, 1, 2, 3)
+    tip_states <- hisse_tree$tip.state
+    
+    # Map to observed binary trait (0 or 1)
+    observed_traits <- tip_states %% 2  # 0,2 → 0, 1,3 → 1
+    
+    # Overwrite tip names (careful!)
+    hisse_tree$tip.state <- observed_traits
+    
     traits = hisse_tree$tip.state
     traits = traits[match(hisse_tree$tip.label, names(traits))]
     ground_truth = data.frame(traits)
@@ -115,10 +125,10 @@ get_hisse_sample <- function(){
 for(i in 1:number_of_repetitions){
   BMT_sample = get_BMT_sample()
   output_simulation(file.path('non_standard_simulations','BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
-  
+
   EB_sample = get_EB_sample()
   output_simulation(file.path('non_standard_simulations','EB'),EB_sample, EB_sample$tree,'continuous', i)
-  
+
   bisse_sample = get_bisse_sample()
   output_simulation(file.path('non_standard_simulations','BISSE'),bisse_sample, bisse_sample$tree,'binary', i)
   

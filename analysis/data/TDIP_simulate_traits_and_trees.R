@@ -1,6 +1,6 @@
 # Do binary and continuous cases under different evolutionary assumptions
 # https://github.com/Matgend/TDIP
-# install.packages('nloptr')
+# install.packages('nloptr','remotes','devtools')
 # install.packages(c('mlr3pipelines', 'missMDA', 'mlr3learners', 'Amelia', 'softImpute', 'missRanger'))
 # install.packages(c('missForest', 'VIM'))
 # install.packages("NADIA_0.4.2.tar.gz", repos = NULL, type = "source") #https://github.com/Matgend/TDIP?tab=readme-ov-file#installation
@@ -9,6 +9,7 @@
 # remotes::install_version("geiger", version = "2.0.10") # see https://github.com/Matgend/TDIP/issues/1
 # packageVersion("geiger")
 # install.packages(c('gmp', 'Rmpfr', 'corHMM')) # apt-get install libgmp-dev libmpfr-dev
+# remotes::install_github("cran/NADIA")
 # devtools::install_github("Matgend/TDIP")
 
 # Gendre Matthieu. 2022. TDIP: Trait Data Imputation with Phylogeny.

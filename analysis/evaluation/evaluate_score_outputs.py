@@ -128,7 +128,7 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
 
 def plot_results(df, model_names, out_dir, tag):
     plot_df = df[model_names]
-    sns.violinplot(data=plot_df, fill=False)
+    sns.boxplot(data=plot_df)
     plt.xticks(rotation=30, ha='right')
     plt.ylabel('Loss')
     plt.tight_layout()
