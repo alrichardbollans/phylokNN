@@ -37,17 +37,20 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
                 raise AssertionError(f'Model issue {df.columns[0]}')
 
 def get_model_names(bin_or_cont):
-    if bin_or_cont == 'binary':
-        model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
+    bin_model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
                        'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded', 'logit_autoenc_supervised',
-                       'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised','xgb_autoencoded', 'xgb_autoenc_supervised']
+                       'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised', 'xgb_autoencoded', 'xgb_autoenc_supervised']
+    cont_model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
+                        'linear_eigenvecs', 'linear_umap', 'linear_autoencoded',
+                        'xgb_eigenvecs', 'xgb_umap', 'xgb_autoencoded']
+    if bin_or_cont == 'binary':
+        return bin_model_names
     elif bin_or_cont == 'continuous':
-        model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
-                       'linear_eigenvecs', 'linear_umap','linear_autoencoded',
-                       'xgb_eigenvecs', 'xgb_umap','xgb_autoencoded']
+        return cont_model_names
+    elif bin_or_cont == 'both':
+        return list(set(bin_model_names+cont_model_names))
     else:
         raise ValueError(f'Unknown data type {bin_or_cont}')
-    return model_names
 
 
 def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str, drop_nans=False):
