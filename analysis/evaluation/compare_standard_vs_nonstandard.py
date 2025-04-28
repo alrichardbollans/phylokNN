@@ -1,11 +1,40 @@
 import os
 
+import numpy as np
 import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
 from scipy.stats import ttest_ind
 
 from analysis.evaluation.evaluate_score_outputs import collate_simulation_outputs, output_results_from_df, get_model_names
-from analysis.imputation.helper_functions import missingness_types, nonstandard_sim_types
+from analysis.imputation.helper_functions import missingness_types, nonstandard_sim_types, number_of_simulation_iterations
+
+
+def check_scales():
+    # This is just a sanity check to check the scaling
+    EB_values = []
+    BMT_values = []
+    standard_values = []
+
+    for tag in range(1, number_of_simulation_iterations + 1):
+        tag = str(tag)
+        eb_val = pd.read_csv(os.path.join('..', 'data', 'non_standard_simulations', 'EB', 'continuous', tag, 'ground_truth.csv'))[
+            'trait_EB_scaled'].tolist()
+        EB_values += eb_val
+
+        bmt_val = pd.read_csv(os.path.join('..', 'data', 'non_standard_simulations', 'BMT', 'continuous', tag, 'ground_truth.csv'))[
+            'trait_BM_trend_scaled'].tolist()
+        BMT_values += bmt_val
+
+        standard_val = pd.read_csv(os.path.join('..', 'data', 'simulations', 'continuous', tag, 'ground_truth.csv'))[
+            'F1.1/1'].tolist()
+        standard_values += standard_val
+    print('EB values:', np.mean(EB_values))
+    print('BMT values:', np.mean(BMT_values))
+    print('Standard values:', np.mean(standard_values))
+    plot_df = pd.DataFrame({'standard_values': standard_values, 'EB_values': EB_values, 'BMT_values': BMT_values})
+    sns.boxplot(plot_df)
+    plt.show()
 
 
 def evaluate_standard_vs_nonstandard():
@@ -51,15 +80,17 @@ def evaluate_standard_vs_nonstandard():
     plot_df = pd.DataFrame(bin_standard_df.mean())
     plot_df.columns = ['Mean Loss']
     plot_df['Model'] = plot_df.index
-    plot_df['Type']='Standard'
+    plot_df['Type'] = 'Standard'
 
     ns_plot_df = pd.DataFrame(bin_non_standard_df.mean())
     ns_plot_df.columns = ['Mean Loss']
     ns_plot_df['Model'] = ns_plot_df.index
-    ns_plot_df['Type']='Non Standard'
+    ns_plot_df['Type'] = 'Non Standard'
 
-    import seaborn as sns
-    sns.barplot(pd.concat([plot_df, ns_plot_df]), x='Model', y='Mean Loss', hue='Type')
+    g = sns.barplot(pd.concat([plot_df, ns_plot_df]), x='Model', y='Mean Loss', hue='Type')
+
+    g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    plt.tight_layout()
     plt.savefig(os.path.join('outputs', 'binary_means.jpg'))
     plt.close()
 
@@ -74,11 +105,10 @@ def evaluate_standard_vs_nonstandard():
     ns_plot_df['Model'] = ns_plot_df.index
     ns_plot_df['Type'] = 'Non Standard'
 
-    import seaborn as sns
-    sns.barplot(pd.concat([plot_df, ns_plot_df]), x='Model', y='Mean Loss', hue='Type')
+    g = sns.barplot(pd.concat([plot_df, ns_plot_df]), x='Model', y='Mean Loss', hue='Type')
+    g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    plt.tight_layout()
     plt.savefig(os.path.join('outputs', 'continuous_means.jpg'))
-
-
 
     ## Output ttest results
     ttest_dict = {}
@@ -103,4 +133,5 @@ def evaluate_standard_vs_nonstandard():
 
 
 if __name__ == '__main__':
+    sns.set_theme(style="whitegrid")
     evaluate_standard_vs_nonstandard()

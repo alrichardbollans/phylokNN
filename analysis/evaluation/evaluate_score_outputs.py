@@ -36,6 +36,7 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
                 # print([c for c in pred_species if c not in test_species])
                 raise AssertionError(f'Model issue {df.columns[0]}')
 
+
 def get_model_names(bin_or_cont):
     bin_model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
                        'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded', 'logit_autoenc_supervised',
@@ -48,7 +49,7 @@ def get_model_names(bin_or_cont):
     elif bin_or_cont == 'continuous':
         return cont_model_names
     elif bin_or_cont == 'both':
-        return list(set(bin_model_names+cont_model_names))
+        return list(set(bin_model_names + cont_model_names))
     else:
         raise ValueError(f'Unknown data type {bin_or_cont}')
 
@@ -181,6 +182,8 @@ def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str
 
 
 def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False):
+    if drop_nans:
+        raise NotImplementedError('This is implemented but just clutters the results.')
     full_df = pd.DataFrame()
     for tag in range(1, number_of_simulation_iterations + 1):
         run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans)
@@ -203,24 +206,22 @@ def evaluate_all_combinations():
         all_missing_cont_df = pd.DataFrame()
         print(m)
         bin_false_df = collate_simulation_outputs('simulations', 'binary', m, drop_nans=False)
-        collate_simulation_outputs('simulations', 'binary', m, drop_nans=True)
+        # collate_simulation_outputs('simulations', 'binary', m, drop_nans=True)
 
         binary_df = pd.concat([binary_df, bin_false_df])
         all_missing_bin_df = pd.concat([all_missing_bin_df, bin_false_df])
 
-        cont_false_df =collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
-        collate_simulation_outputs('simulations', 'continuous', m, drop_nans=True)
+        cont_false_df = collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
+        # collate_simulation_outputs('simulations', 'continuous', m, drop_nans=True)
 
         cont_df = pd.concat([cont_df, cont_false_df])
         all_missing_cont_df = pd.concat([all_missing_cont_df, cont_false_df])
-
-
 
         # Nonstandard Simulations
         for sim_type in nonstandard_sim_types:
             bin_or_cont = nonstandard_sim_types[sim_type]
             m_false_df = collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=False)
-            collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=True)
+            # collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=True)
 
             if bin_or_cont == 'binary':
                 binary_df = pd.concat([binary_df, m_false_df])

@@ -142,6 +142,14 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
     '''
     show majority samples to autoencoder to learn latent space. Idea is it learns a latent space that captures the underlying patterns of normal behavior.
     Then, when new data is projected into this latent space, deviations from normal patterns can be more easily separated using a supervised classifier.
+
+    From approach in Gerych, Walter, Emmanuel Agu, and Elke Rundensteiner.
+    ‘Classifying Depression in Imbalanced Datasets Using an Autoencoder- Based Anomaly Detection Approach’.
+    In 2019 IEEE 13th International Conference on Semantic Computing (ICSC), 124–27. Newport Beach, CA, USA: IEEE, 2019.
+    https://doi.org/10.1109/ICOSC.2019.8665535.
+
+    It may not be the best way to use supervised autoencoders but it may improve on the unsupervised case.
+
     '''
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
 
