@@ -87,7 +87,7 @@ generate_binary_sample <- function(){
 
 
 source('helper_simulation_methods.R')
-
+source('helpful_phyl_methods.R')
 dir.create('simulations')
 for(i in 1:number_of_repetitions){
   simcontinuousData = generate_continuous_sample()
@@ -97,6 +97,7 @@ for(i in 1:number_of_repetitions){
   simcontinuousData$FinalData[target_name] <- scale(simcontinuousData$FinalData[target_name])
   
   tree = simcontinuousData$TreeList$`1`
+  ape::is.ultrametric(tree)
   dir.create(file.path('simulations', 'continuous'))
   output_simulation('simulations',simcontinuousData, tree,'continuous', i)
   
@@ -104,6 +105,7 @@ for(i in 1:number_of_repetitions){
 for(i in 1:number_of_repetitions){
   simbinaryData = generate_binary_sample()
   tree = simbinaryData$TreeList$`1`
+  ape::is.ultrametric(tree)
   dir.create(file.path('simulations', 'binary'))
   output_simulation('simulations',simbinaryData, tree,'binary', i)
 }

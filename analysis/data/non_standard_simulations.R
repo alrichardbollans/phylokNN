@@ -6,7 +6,7 @@ source('helper_simulation_methods.R')
 
 get_tree <- function(){
 
-  tree <- pbtree(n=param_tree[3])  # Simulate a tree with 50 taxa
+  tree <- pbtree(n=param_tree[3])
   # plot(tree)
   return(tree)
 }
@@ -124,14 +124,18 @@ get_hisse_sample <- function(){
 
 for(i in 1:number_of_repetitions){
   BMT_sample = get_BMT_sample()
+  ape::is.ultrametric(BMT_sample$tree)
   output_simulation(file.path('non_standard_simulations','BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
 
   EB_sample = get_EB_sample()
+  ape::is.ultrametric(EB_sample$tree)
   output_simulation(file.path('non_standard_simulations','EB'),EB_sample, EB_sample$tree,'continuous', i)
 
   bisse_sample = get_bisse_sample()
+  ape::is.ultrametric(bisse_sample$tree)
   output_simulation(file.path('non_standard_simulations','BISSE'),bisse_sample, bisse_sample$tree,'binary', i)
   
   hisse_sample = get_hisse_sample()
+  ape::is.ultrametric(hisse_sample$tree)
   output_simulation(file.path('non_standard_simulations','HISSE'),hisse_sample, hisse_sample$tree,'binary', i)
 }

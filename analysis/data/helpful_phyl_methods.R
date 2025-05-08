@@ -1,7 +1,7 @@
 library(dplyr)
 
 number_of_repetitions = 100
-param_tree <- list(0.4, 0.1, 100) # Values used in Gendre paper
+param_tree <- list(0.4, 0.1, 100) # Values used in Gendre paper. birth rates. death rates and number of desired species.
 missingRate <- 0.1
 
 replace_space_with_underscore_in_name<- function(given_name){
