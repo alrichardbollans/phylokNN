@@ -16,6 +16,7 @@ number_of_simulation_iterations = 100
 missingness_types = ['mcar', 'phyloNa']
 
 nonstandard_sim_types = {'BMT': 'continuous', 'EB': 'continuous', 'BISSE': 'binary', 'HISSE': 'binary'}
+extinct_sim_types = ['Extinct_BMT']
 
 n_split_for_nested_cv = 5
 
@@ -25,6 +26,8 @@ def get_iteration_path_from_base(base: str, real_or_sim: str, bin_or_cont: str, 
     elif real_or_sim in nonstandard_sim_types:
         assert nonstandard_sim_types[real_or_sim] == bin_or_cont
         basepath = os.path.join(base, 'non_standard_simulations', real_or_sim)
+    elif real_or_sim in extinct_sim_types:
+        basepath = os.path.join(base, 'non_ultrametric_simulations', real_or_sim)
     else:
         raise ValueError('Unknown real or simulation data')
 

@@ -23,20 +23,26 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
     run_picante_models('HISSE', 'binary', iter, missing_type)
     run_corHMM_models('BISSE', 'binary', iter, missing_type)
     run_corHMM_models('HISSE', 'binary', iter, missing_type)
-    
-    
+
+
     run_picante_models('simulations', 'binary', iter, missing_type)
     run_corHMM_models('simulations', 'binary', iter, missing_type)
+    
+    run_picante_models('Extinct_BMT', 'binary', iter, missing_type)
+    run_corHMM_models('Extinct_BMT', 'binary', iter, missing_type)
     
     
     # Continuous cases
     run_phylopars_models('simulations', 'continuous', iter, missing_type)
     run_picante_models('simulations', 'continuous', iter, missing_type)
+
     run_phylopars_models('BMT', 'continuous', iter, missing_type)
     run_phylopars_models('EB', 'continuous', iter, missing_type)
     run_picante_models('BMT', 'continuous', iter, missing_type)
     run_picante_models('EB', 'continuous', iter, missing_type)
     
+    run_phylopars_models('Extinct_BMT', 'continuous', iter, missing_type)
+    run_picante_models('Extinct_BMT', 'continuous', iter, missing_type)
     
   }
 }

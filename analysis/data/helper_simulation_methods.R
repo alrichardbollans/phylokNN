@@ -2,18 +2,41 @@ library(TDIP)
 
 output_simulation <- function(base_output_path, simData, tree, tag,id){
   param_df = simData$Dataframe
+  extinct_tips = getExtinct(tree, tol=1e-8)
   #PhyloNa
   # the case in which species belonging to particular clades are more 
   # likely to be missing trait data
   phyloNa_values <- phyloNa_miss_meca(missingRate = missingRate,
                                       ds = simData$FinalData,
                                       tree = tree)[[1]]
+  # Check some extinct tips are NaN where we have extinct tips
+  if(length(extinct_tips)!=0){
+    nan_tips = rownames(phyloNa_values)[which(is.na(phyloNa_values[, 1]))]
+    extinct_and_nan = intersect(extinct_tips,nan_tips)
+    while(length(extinct_and_nan)==0){
+      phyloNa_values <- phyloNa_miss_meca(missingRate = missingRate,
+                                          ds = simData$FinalData,
+                                          tree = tree)[[1]]
+      nan_tips = rownames(phyloNa_values)[which(is.na(phyloNa_values[, 1]))]
+      extinct_and_nan = intersect(extinct_tips,nan_tips)
+    }
+  }
   #MCAR
   # Missing completely at random (MCAR), where a random sample of data 
   # independent of their values and other traits is missing
   mcar_values <- mcar_miss_meca(missingRate = missingRate,
                                 ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
-  
+  # Check some extinct tips are NaN where we have extinct tips
+  if(length(extinct_tips)!=0){
+    nan_tips = rownames(mcar_values)[which(is.na(mcar_values[, 1]))]
+    extinct_and_nan = intersect(extinct_tips,nan_tips)
+    while(length(extinct_and_nan)==0){
+      mcar_values <- mcar_miss_meca(missingRate = missingRate,
+                                    ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
+      nan_tips = rownames(mcar_values)[which(is.na(mcar_values[, 1]))]
+      extinct_and_nan = intersect(extinct_tips,nan_tips)
+    }
+  }
   #MNAR
   # missing not at random (MNAR), where missing data are a non-random 
   # subset of the values that does not relate to other traits included 

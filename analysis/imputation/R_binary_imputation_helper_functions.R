@@ -10,13 +10,16 @@ input_data_path = file.path(repo_path, 'phyloKNN', 'analysis', 'data')
 prediction_path = file.path(repo_path, 'phyloKNN', 'analysis', 'imputation')
 
 nonstandard_sim_types = c('BMT', 'EB', 'BISSE', 'HISSE')
-
+extinct_sim_types = c('Extinct_BMT')
 
 get_iteration_path_from_base <- function(base, real_or_sim, bin_or_cont, iteration) {
   if (real_or_sim == "real_data" || real_or_sim == "simulations") {
     basepath <- file.path(base, real_or_sim)
   } else if(real_or_sim %in% nonstandard_sim_types){
     basepath = file.path(base, 'non_standard_simulations', real_or_sim)
+    
+  }else if(real_or_sim %in% extinct_sim_types){
+    basepath = file.path(base, 'non_ultrametric_simulations', real_or_sim)
     
   } else {
     stop("Unknown real or simulation data")

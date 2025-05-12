@@ -20,17 +20,17 @@ format_phylopars <- function(phylopars_predictions,kfold_test_plants, target){
 run_phylopars_models <- function(real_or_sim, bin_or_cont, iteration, missing_type){
   setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
   labelled_tree = setup_$labelled_tree
-  if(!ape::is.ultrametric(labelled_tree)){
-    labelled_tree = phytools::force.ultrametric(labelled_tree) # phylopars needs an ultrametric tree
-  }
+  # if(!ape::is.ultrametric(labelled_tree)){
+  #   labelled_tree = phytools::force.ultrametric(labelled_tree) # phylopars needs an ultrametric tree but only for OU model
+  # }
   missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
   target = setup_$target
   non_missing_data = setup_$non_missing_data
   skfolds = setup_$skfolds
   training_tree = setup_$training_tree
-  if(!ape::is.ultrametric(training_tree)){
-    training_tree = phytools::force.ultrametric(training_tree) # phylopars needs an ultrametric tree
-  }
+  # if(!ape::is.ultrametric(training_tree)){
+  #   training_tree = phytools::force.ultrametric(training_tree) # phylopars needs an ultrametric tree but only for OU model
+  # }
   
   
   best_mae = -1
@@ -54,6 +54,7 @@ run_phylopars_models <- function(real_or_sim, bin_or_cont, iteration, missing_ty
       
       phylopars_data = subset(phylopars_data, select = c("species", target))
       ## Catch errors, this can happen for certain ev models (think just kappa)
+      ### and OU model not currently supported for non-ultrametric trees.
       try(
         {
           p_v = Rphylopars::phylopars(phylopars_data, training_tree, model = ev_model)
@@ -67,7 +68,7 @@ run_phylopars_models <- function(real_or_sim, bin_or_cont, iteration, missing_ty
           mae_for_this_fold = Metrics::mae(df_merge[[target]], df_merge$estimate)
           mae_for_this_config = mae_for_this_config+mae_for_this_fold
           number_of_successful_folds = number_of_successful_folds+1
-        }, silent = TRUE
+        }, silent = FALSE
       )
       
     }

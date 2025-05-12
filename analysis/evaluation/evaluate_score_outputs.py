@@ -140,20 +140,22 @@ def plot_results(df, model_names, out_dir, tag):
     plt.clf()
     plt.close()
 
-    if 'lambda' in df.columns:
+    # if 'lambda' in df.columns:
+    #
+    #     for model_name in model_names:
+    #         sns.jointplot(data=df, x='lambda', y=model_name, kind="reg")
+    #         plt.xticks(rotation=30, ha='right')
+    #         plt.ylabel(f'{model_name} Loss')
+    #         plt.xlabel(f'Lambda')
+    #         plt.tight_layout()
+    #         plt.savefig(os.path.join(out_dir, f'{tag}lambda_vs_{model_name}_loss.jpg'), dpi=300)
+    #         plt.clf()
+    #         plt.close()
 
-        for model_name in model_names:
-            sns.jointplot(data=df, x='lambda', y=model_name, kind="reg")
-            plt.xticks(rotation=30, ha='right')
-            plt.ylabel(f'{model_name} Loss')
-            plt.xlabel(f'Lambda')
-            plt.tight_layout()
-            plt.savefig(os.path.join(out_dir, f'{tag}lambda_vs_{model_name}_loss.jpg'), dpi=300)
-            plt.clf()
-            plt.close()
 
-
-def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool):
+def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool = False):
+    if drop_nans:
+        raise NotImplementedError('This is implemented but just clutters the results.')
     full_df = full_df.reset_index(drop=True)
     pathlib.Path(out_dir).mkdir(exist_ok=True, parents=True)
 
@@ -190,7 +192,8 @@ def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type:
         run_df = pd.DataFrame(run_dict, index=[tag])
         full_df = pd.concat([full_df, run_df])
     out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
-
+    full_df['EV Model'] = real_or_sim
+    full_df['Missing Type'] = missing_type
     output_results_from_df(full_df, out_dir, bin_or_cont, drop_nans)
 
     return full_df
@@ -202,41 +205,39 @@ def evaluate_all_combinations():
     cont_df = pd.DataFrame()
 
     for m in missingness_types:
-        all_missing_bin_df = pd.DataFrame()
-        all_missing_cont_df = pd.DataFrame()
         print(m)
-        bin_false_df = collate_simulation_outputs('simulations', 'binary', m, drop_nans=False)
-        # collate_simulation_outputs('simulations', 'binary', m, drop_nans=True)
+        ### Standard
+        bin_standard_df = collate_simulation_outputs('simulations', 'binary', m)
 
-        binary_df = pd.concat([binary_df, bin_false_df])
-        all_missing_bin_df = pd.concat([all_missing_bin_df, bin_false_df])
+        binary_df = pd.concat([binary_df, bin_standard_df])
 
-        cont_false_df = collate_simulation_outputs('simulations', 'continuous', m, drop_nans=False)
-        # collate_simulation_outputs('simulations', 'continuous', m, drop_nans=True)
+        cont_standard_df = collate_simulation_outputs('simulations', 'continuous', m)
 
-        cont_df = pd.concat([cont_df, cont_false_df])
-        all_missing_cont_df = pd.concat([all_missing_cont_df, cont_false_df])
+        cont_df = pd.concat([cont_df, cont_standard_df])
+
+        ### Extincts
+        bin_extinct_df = collate_simulation_outputs('Extinct_BMT', 'binary', m)
+
+        binary_df = pd.concat([binary_df, bin_extinct_df])
+
+        cont_extinct_df = collate_simulation_outputs('Extinct_BMT', 'continuous', m)
+
+        cont_df = pd.concat([cont_df, cont_extinct_df])
 
         # Nonstandard Simulations
         for sim_type in nonstandard_sim_types:
             bin_or_cont = nonstandard_sim_types[sim_type]
-            m_false_df = collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=False)
-            # collate_simulation_outputs(sim_type, bin_or_cont, m, drop_nans=True)
+            sim_type_df = collate_simulation_outputs(sim_type, bin_or_cont, m)
 
             if bin_or_cont == 'binary':
-                binary_df = pd.concat([binary_df, m_false_df])
-                all_missing_bin_df = pd.concat([all_missing_bin_df, m_false_df])
+                binary_df = pd.concat([binary_df, sim_type_df])
 
             if bin_or_cont == 'continuous':
-                cont_df = pd.concat([cont_df, m_false_df])
-                all_missing_cont_df = pd.concat([all_missing_cont_df, m_false_df])
+                cont_df = pd.concat([cont_df, sim_type_df])
 
-        output_results_from_df(all_missing_bin_df, os.path.join('outputs', f'{m}_binary'), 'binary', drop_nans=False)
-        output_results_from_df(all_missing_cont_df, os.path.join('outputs', f'{m}_continuous'), 'continuous', drop_nans=False)
+    output_results_from_df(binary_df, os.path.join('outputs', 'binary'), 'binary')
 
-    output_results_from_df(binary_df, os.path.join('outputs', 'binary'), 'binary', drop_nans=False)
-
-    output_results_from_df(cont_df, os.path.join('outputs', 'continuous'), 'continuous', drop_nans=False)
+    output_results_from_df(cont_df, os.path.join('outputs', 'continuous'), 'continuous')
 
 
 if __name__ == '__main__':

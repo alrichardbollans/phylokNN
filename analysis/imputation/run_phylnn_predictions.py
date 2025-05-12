@@ -16,6 +16,9 @@ def main():
             phylnn_predict('BISSE', 'binary', tag, m)
             phylnn_predict('HISSE', 'binary', tag, m)
 
+            phylnn_predict('Extinct_BMT', 'continuous', tag, m)
+            phylnn_predict('Extinct_BMT', 'binary', tag, m)
+
 
 if __name__ == '__main__':
     main()

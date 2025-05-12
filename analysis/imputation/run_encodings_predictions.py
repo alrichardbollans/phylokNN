@@ -190,7 +190,7 @@ def run_predictions():
         for m in missingness_types:
             for bin_or_cont in ['binary', 'continuous']:
 
-                sim_list = ['simulations']
+                sim_list = ['simulations', 'Extinct_BMT']
                 if bin_or_cont == 'continuous':
                     sim_list += ['BMT', 'EB']
                 if bin_or_cont == 'binary':

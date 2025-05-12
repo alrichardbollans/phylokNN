@@ -1,8 +1,15 @@
 source('helpful_phyl_methods.R')
 source('helper_simulation_methods.R')
+
+library(phytools)
+library(ape)
+
 get_tree <- function(){
   
-  tree <- pbtree(b=1,d=0.3,n=param_tree[3])
+  tree <- pbtree(b=1,d=0.33,n=param_tree[3])
+  while (length(getExtant(tree))!= param_tree[3]){
+    tree <- pbtree(b=1,d=0.33,n=param_tree[3])
+  }
   # plot(tree)
   # print(ape::is.ultrametric(tree))
   return(tree)
@@ -21,6 +28,14 @@ get_BMT_sample <- function(){
   ground_truth = data.frame(trait_BM_trend_scaled)
   
   param_dataframe = data.frame(mu=c(mu))
+  
+  min = min(ground_truth$trait_BM_trend_scaled)
+  max = max(ground_truth$trait_BM_trend_scaled)
+  print('########## mu, min max')
+  print(mu)
+  print(min)
+  print(max)
+  print('##########')
   return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
 }
 
@@ -42,13 +57,13 @@ for(i in 1:number_of_repetitions){
   if(ape::is.ultrametric(BMT_sample$tree)){
     stop()
   }
-  output_simulation(file.path('non_ultrametric_simulations','BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
+  output_simulation(file.path('non_ultrametric_simulations','Extinct_BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
   
   binary_BMT_sample = get_binary_BMT_sample()
   if(ape::is.ultrametric(binary_BMT_sample$tree)){
     stop()
   }
-  output_simulation(file.path('non_ultrametric_simulations','BMT'),binary_BMT_sample, binary_BMT_sample$tree,'binary', i)
+  output_simulation(file.path('non_ultrametric_simulations','Extinct_BMT'),binary_BMT_sample, binary_BMT_sample$tree,'binary', i)
   
 }
 

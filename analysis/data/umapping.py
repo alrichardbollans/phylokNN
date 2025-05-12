@@ -42,7 +42,10 @@ def main():
 
                     umap_embedding = unsupervised(dir_path)
                     umap_embedding.to_csv(os.path.join(dir_path, 'umap_unsupervised_embedding.csv'))
+            dir_path = os.path.join(input_data_path, 'non_ultrametric_simulations', 'Extinct_BMT', var_type, str(tag))
 
+            umap_embedding = unsupervised(dir_path)
+            umap_embedding.to_csv(os.path.join(dir_path, 'umap_unsupervised_embedding.csv'))
 
 if __name__ == '__main__':
     main()
