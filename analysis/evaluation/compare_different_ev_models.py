@@ -8,13 +8,24 @@ from matplotlib import pyplot as plt
 from analysis.evaluation.evaluate_score_outputs import get_model_names
 from analysis.imputation.helper_functions import missingness_types, nonstandard_sim_types, number_of_simulation_iterations
 
+bin_model_names = get_model_names('binary')
+bin_model_names.remove('phylnn_raw')
+cont_model_names = get_model_names('continuous')
+cont_model_names.remove('phylnn_raw')
 rename_models_and_ev_models = {'phylnn_fill_means': 'phyloKNN', 'logit_eigenvecs': 'Eigenvec (L)', 'logit_umap': 'UMAP (L)',
                                'logit_umap_supervised': 'UMAP* (L)', 'logit_autoencoded': 'Autoenc (L)', 'logit_autoenc_supervised': 'Autoenc* (L)',
                                'xgb_eigenvecs': 'Eigenvec (XGB)', 'xgb_umap': 'UMAP (XGB)',
                                'xgb_umap_supervised': 'UMAP* (XGB)', 'xgb_autoencoded': 'Autoenc (XGB)', 'xgb_autoenc_supervised': 'Autoenc* (XGB)',
-'linear_eigenvecs': 'Eigenvec (L)', 'linear_umap': 'UMAP (L)',
-                               'linear_umap_supervised': 'UMAP* (L)', 'linear_autoencoded': 'Autoenc (L)', 'linear_autoenc_supervised': 'Autoenc* (L)',
+                               'linear_eigenvecs': 'Eigenvec (L)', 'linear_umap': 'UMAP (L)',
+                               'linear_umap_supervised': 'UMAP* (L)', 'linear_autoencoded': 'Autoenc (L)',
+                               'linear_autoenc_supervised': 'Autoenc* (L)',
                                }
+
+binary_model_order = ['corHMM', 'picante', 'phyloKNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)', 'UMAP (XGB)', 'UMAP* (XGB)',
+                      'Autoenc (L)', 'Autoenc* (L)', 'Autoenc (XGB)', 'Autoenc* (XGB)']
+
+continuous_model_order = ['phylopars', 'picante', 'phyloKNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP (XGB)',
+                          'Autoenc (L)', 'Autoenc (XGB)']
 
 
 def check_scales():
@@ -44,25 +55,20 @@ def check_scales():
     plt.show()
 
 
-def plot_binary_and_continuous_cases():
-    bin_model_names = get_model_names('binary')
-    bin_model_names.remove('phylnn_raw')
-    cont_model_names = get_model_names('continuous')
-    cont_model_names.remove('phylnn_raw')
-
-    bin_df = pd.read_csv(os.path.join('outputs', 'binary', 'results.csv'))[bin_model_names + ['EV Model', 'Missing Type']]
+def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
+    sns.set_theme()
 
     ## do a useful plot
     plot_df = bin_df.groupby('EV Model').mean(numeric_only=True)
     plot_df = plot_df.reset_index()
     p_df = pd.melt(plot_df, id_vars='EV Model', value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
-    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'ARD/SYM/ER', 'Extinct_BMT':'BMT †'}).fillna(p_df['EV Model'])
+    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
 
     ev_order = ['ARD/SYM/ER', 'BISSE', 'HISSE', 'BMT †']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
 
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model')
+    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order)
 
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
@@ -70,19 +76,18 @@ def plot_binary_and_continuous_cases():
         bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
     )
     plt.tight_layout()
-    plt.savefig(os.path.join('outputs', 'binary_means.jpg'), dpi=300)
+    plt.savefig(os.path.join(out_dir, 'binary_means.jpg'), dpi=300)
     plt.close()
 
     ## do a useful plot
-    cont_df = pd.read_csv(os.path.join('outputs', 'continuous', 'results.csv'))[cont_model_names + ['EV Model', 'Missing Type']]
     plot_df = cont_df.groupby('EV Model').mean(numeric_only=True)
     plot_df = plot_df.reset_index()
     p_df = pd.melt(plot_df, id_vars='EV Model', value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
-    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'BM/OU', 'Extinct_BMT':'BMT †'}).fillna(p_df['EV Model'])
+    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
     ev_order = ['BM/OU', 'BMT', 'EB', 'BMT †']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model')
+    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=continuous_model_order)
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
@@ -90,10 +95,16 @@ def plot_binary_and_continuous_cases():
     )
 
     plt.tight_layout()
-    plt.savefig(os.path.join('outputs', 'continuous_means.jpg'), dpi=300)
+    plt.savefig(os.path.join(out_dir, 'continuous_means.jpg'), dpi=300)
+
+
+def main():
+    bin_df = pd.read_csv(os.path.join('outputs', 'binary', 'results.csv'))[bin_model_names + ['EV Model', 'Missing Type']]
+    cont_df = pd.read_csv(os.path.join('outputs', 'continuous', 'results.csv'))[cont_model_names + ['EV Model', 'Missing Type']]
+
+    plot_binary_and_continuous_cases(bin_df, cont_df, 'outputs')
 
 
 if __name__ == '__main__':
     # check_scales()
-    sns.set_theme()
-    plot_binary_and_continuous_cases()
+    main()
