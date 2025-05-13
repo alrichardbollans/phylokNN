@@ -62,10 +62,10 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     plot_df = bin_df.groupby('EV Model').mean(numeric_only=True)
     plot_df = plot_df.reset_index()
     p_df = pd.melt(plot_df, id_vars='EV Model', value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
-    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †'}).fillna(p_df['EV Model'])
+    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †', 'real_data':'MPNS'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
 
-    ev_order = ['ARD/SYM/ER', 'BISSE', 'HISSE', 'BMT †']
+    ev_order = ['ARD/SYM/ER', 'BISSE', 'HISSE', 'BMT †', 'MPNS']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
 
     g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order)
@@ -73,7 +73,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
-        bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
+        bbox_to_anchor=(.5, 1), ncol=5, title=None, frameon=False,
     )
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'binary_means.jpg'), dpi=300)
@@ -83,15 +83,15 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     plot_df = cont_df.groupby('EV Model').mean(numeric_only=True)
     plot_df = plot_df.reset_index()
     p_df = pd.melt(plot_df, id_vars='EV Model', value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
-    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †'}).fillna(p_df['EV Model'])
+    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †', 'real_data':'BIEN'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
-    ev_order = ['BM/OU', 'BMT', 'EB', 'BMT †']
+    ev_order = ['BM/OU', 'BMT', 'EB', 'BMT †','BIEN']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
     g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=continuous_model_order)
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
-        bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
+        bbox_to_anchor=(.5, 1), ncol=5, title=None, frameon=False,
     )
 
     plt.tight_layout()

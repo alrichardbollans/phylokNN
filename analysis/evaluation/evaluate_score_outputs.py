@@ -57,28 +57,25 @@ def get_model_names(bin_or_cont):
 def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str, drop_nans=False):
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
     out_dict = {}
-    if real_or_sim == 'real_data':
 
-        model_names = ['phylnn_raw', 'phylnn_fill_means']
-    else:
-        df_params = pd.read_csv(os.path.join(data_path, 'dataframe_params.csv'), index_col=0)
-        try:
-            lambda_ = df_params['lambda'].iloc[0]
-            out_dict['lambda'] = lambda_
-        except KeyError:
-            lambda_ = None
-        try:
-            evmodel_ = df_params['model'].iloc[0]
-        except KeyError:
-            evmodel_ = real_or_sim
+    df_params = pd.read_csv(os.path.join(data_path, 'dataframe_params.csv'), index_col=0)
+    try:
+        lambda_ = df_params['lambda'].iloc[0]
+        out_dict['lambda'] = lambda_
+    except KeyError:
+        lambda_ = None
+    try:
+        evmodel_ = df_params['model'].iloc[0]
+    except KeyError:
+        evmodel_ = real_or_sim
 
-        try:
-            kappa_ = df_params['kappa'].iloc[0]
-            out_dict['kappa'] = kappa_
-        except KeyError:
-            kappa_ = None
-        out_dict['Ev Model'] = evmodel_
-        model_names = get_model_names(bin_or_cont)
+    try:
+        kappa_ = df_params['kappa'].iloc[0]
+        out_dict['kappa'] = kappa_
+    except KeyError:
+        kappa_ = None
+    out_dict['Ev Model'] = evmodel_
+    model_names = get_model_names(bin_or_cont)
 
     ground_truth = pd.read_csv(os.path.join(data_path, 'ground_truth.csv'), index_col=0)
     assert len(ground_truth.columns) == 1
@@ -183,11 +180,12 @@ def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str
     plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, tag)
 
 
-def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False):
+def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False,
+                               range_to_eval: int = number_of_simulation_iterations):
     if drop_nans:
         raise NotImplementedError('This is implemented but just clutters the results.')
     full_df = pd.DataFrame()
-    for tag in range(1, number_of_simulation_iterations + 1):
+    for tag in range(1, range_to_eval + 1):
         run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans)
         run_df = pd.DataFrame(run_dict, index=[tag])
         full_df = pd.concat([full_df, run_df])
@@ -214,6 +212,15 @@ def evaluate_all_combinations():
         cont_standard_df = collate_simulation_outputs('simulations', 'continuous', m)
 
         cont_df = pd.concat([cont_df, cont_standard_df])
+
+        ### real data
+        bin_real_df = collate_simulation_outputs('real_data', 'binary', m)
+
+        binary_df = pd.concat([binary_df, bin_real_df])
+
+        cont_real_df = collate_simulation_outputs('real_data', 'continuous', m)
+
+        cont_df = pd.concat([cont_df, cont_real_df])
 
         ### Extincts
         bin_extinct_df = collate_simulation_outputs('Extinct_BMT', 'binary', m)

@@ -118,7 +118,7 @@ def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingne
     fitter.fit(scaled_penguin_data, y=full_df[target_name].fillna(-1, inplace=False).values)  # give NaNs a label of -1
     embedding = fitter.transform(scaled_penguin_data)
 
-    X = pd.DataFrame(embedding, index=distances.index)
+    X = pd.DataFrame(embedding, index=full_df.index)
     out_df = pd.DataFrame(StandardScaler().fit_transform(X), index=X.index, columns=X.columns)
     out_df[target_name] = full_df[target_name]
 
@@ -163,7 +163,7 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
     encoder_model, encoded_train = autoencode_pairwise_distances(train_data, reduction_fraction=reduction_factor)
     embedding = encoder_model.predict(full_df[distance_vars])
 
-    X = pd.DataFrame(embedding, index=distances.index)
+    X = pd.DataFrame(embedding, index=full_df.index)
     out_df = pd.DataFrame(StandardScaler().fit_transform(X), index=X.index, columns=X.columns)
     out_df[target_name] = full_df[target_name]
 
@@ -189,7 +189,7 @@ def run_predictions():
     for iteration in tqdm(range(1, number_of_simulation_iterations + 1)):
         for m in missingness_types:
             for bin_or_cont in ['binary', 'continuous']:
-
+                # sim_list = ['real_data']
                 sim_list = ['simulations', 'Extinct_BMT']
                 if bin_or_cont == 'continuous':
                     sim_list += ['BMT', 'EB']
