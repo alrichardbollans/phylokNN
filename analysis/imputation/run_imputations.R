@@ -1,14 +1,13 @@
 library(doParallel)
 library(foreach)
 
-num_cores <- detectCores() - 1  # Use all but one core
+num_cores <- detectCores() - 2  # Use all but one core
 cl <- makeCluster(num_cores)
 registerDoParallel(cl)
 
-
-
 number_of_simulation_iterations = 100
 foreach(iter = 1:number_of_simulation_iterations) %dopar% {
+# for(iter in 1:number_of_simulation_iterations){
   repo_path = Sys.getenv('KEWSCRATCHPATH')
   source(file.path(repo_path, 'phyloKNN', 'analysis', 'imputation','R_continuous_imputation_helper_functions.R'))
   
@@ -17,17 +16,19 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
   print(iter)
   for (missing_type in missingness_types) {  # Keep the inner loop sequential
     
-    
     # Binary cases
+    
+    run_picante_models('simulations', 'binary', iter, missing_type)
+    run_corHMM_models('simulations', 'binary', iter, missing_type)
+    
+    run_picante_models('real_data', 'binary', iter, missing_type)
+    run_corHMM_models('real_data', 'binary', iter, missing_type)
+    
     run_picante_models('BISSE', 'binary', iter, missing_type)
     run_picante_models('HISSE', 'binary', iter, missing_type)
     run_corHMM_models('BISSE', 'binary', iter, missing_type)
     run_corHMM_models('HISSE', 'binary', iter, missing_type)
 
-
-    run_picante_models('simulations', 'binary', iter, missing_type)
-    run_corHMM_models('simulations', 'binary', iter, missing_type)
-    
     run_picante_models('Extinct_BMT', 'binary', iter, missing_type)
     run_corHMM_models('Extinct_BMT', 'binary', iter, missing_type)
     
@@ -35,12 +36,15 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
     # Continuous cases
     run_phylopars_models('simulations', 'continuous', iter, missing_type)
     run_picante_models('simulations', 'continuous', iter, missing_type)
+    
+    run_phylopars_models('real_data', 'continuous', iter, missing_type)
+    run_picante_models('real_data', 'continuous', iter, missing_type)
 
     run_phylopars_models('BMT', 'continuous', iter, missing_type)
     run_phylopars_models('EB', 'continuous', iter, missing_type)
     run_picante_models('BMT', 'continuous', iter, missing_type)
     run_picante_models('EB', 'continuous', iter, missing_type)
-    
+
     run_phylopars_models('Extinct_BMT', 'continuous', iter, missing_type)
     run_picante_models('Extinct_BMT', 'continuous', iter, missing_type)
     

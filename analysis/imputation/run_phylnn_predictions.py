@@ -7,8 +7,10 @@ def main():
     for m in missingness_types:
         for tag in tqdm(range(1, number_of_simulation_iterations + 1)):
             phylnn_predict('simulations', 'continuous', tag, m)
-
             phylnn_predict('simulations', 'binary', tag, m)
+
+            phylnn_predict('real_data', 'continuous', tag, m)
+            phylnn_predict('real_data', 'binary', tag, m)
 
             phylnn_predict('BMT', 'continuous', tag, m)
             phylnn_predict('EB', 'continuous', tag, m)

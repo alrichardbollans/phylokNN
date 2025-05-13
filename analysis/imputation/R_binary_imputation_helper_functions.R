@@ -13,7 +13,7 @@ nonstandard_sim_types = c('BMT', 'EB', 'BISSE', 'HISSE')
 extinct_sim_types = c('Extinct_BMT')
 
 get_iteration_path_from_base <- function(base, real_or_sim, bin_or_cont, iteration) {
-  if (real_or_sim == "real_data" || real_or_sim == "simulations") {
+  if (real_or_sim == "real_data" || real_or_sim == "simulations" || real_or_sim == "my_apm_data") {
     basepath <- file.path(base, real_or_sim)
   } else if(real_or_sim %in% nonstandard_sim_types){
     basepath = file.path(base, 'non_standard_simulations', real_or_sim)
@@ -78,20 +78,10 @@ set_up <- function(real_or_sim, bin_or_cont, iteration, missing_type){
   data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
   missing_values = read.csv(file.path(data_path, paste(missing_type,'_values.csv',sep='')))
   
-  
-  if (real_or_sim == "real_data"){
-    if (bin_or_cont == "binary"){
-      tree = ape::read.tree(file.path(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs', 
-                                    'Species', 'Uphylomaker_species_tree.tre'))
-    } else if (bin_or_cont == "continuous"){
-      tree = ape::read.tree(file.path(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs', 
-                                      'Genus', 'Uphylomaker_genus_tree.tre'))
-    }
-  } else {
-    tree = ape::read.tree(file.path(data_path, 'tree.tre'))
-  }
-  
-  prepared_tree = set_labels_on_tree_to_acc_name(tree)
+
+  prepared_tree = ape::read.tree(file.path(data_path, 'tree.tre'))
+
+  # prepared_tree = set_labels_on_tree_to_acc_name(tree)
   labelled_tree = get_subset_of_tree_from_data(missing_values,prepared_tree)
   missing_values_with_tree_labels=get_matching_labels(labelled_tree,missing_values)
   

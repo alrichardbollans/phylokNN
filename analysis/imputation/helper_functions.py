@@ -21,7 +21,7 @@ extinct_sim_types = ['Extinct_BMT']
 n_split_for_nested_cv = 5
 
 def get_iteration_path_from_base(base: str, real_or_sim: str, bin_or_cont: str, iteration: int):
-    if real_or_sim == 'real_data' or real_or_sim == 'simulations':
+    if real_or_sim == 'real_data' or real_or_sim == 'simulations' or real_or_sim == 'my_apm_data':
         basepath = os.path.join(base, real_or_sim)
     elif real_or_sim in nonstandard_sim_types:
         assert nonstandard_sim_types[real_or_sim] == bin_or_cont
@@ -74,16 +74,8 @@ def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_t
     ground_truth = pd.read_csv(os.path.join(data_path, 'ground_truth.csv'))
     missing_values = pd.read_csv(os.path.join(data_path, f'{missing_type}_values.csv'))
     check_data(ground_truth, missing_values)
-    if real_or_sim == 'real_data':
-        assert iteration == 1
-        if bin_or_cont == 'binary':
-            distance_csv = os.path.join(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs', 'Species', 'species_distances.csv')
-        elif bin_or_cont == 'continuous':
-            distance_csv = os.path.join(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs', 'Genus', 'genus_distances.csv')
-        else:
-            raise ValueError(f'Unknown data type {bin_or_cont}')
-    else:
-        distance_csv = os.path.join(data_path, 'tree_distances.csv')
+
+    distance_csv = os.path.join(data_path, 'tree_distances.csv')
 
     if bin_or_cont == 'continuous':
         clf = False
@@ -107,15 +99,6 @@ def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_t
 
     njobs = -1
     verbose = 0
-    if clf and real_or_sim == 'real_data':
-        # Some species are in the MPNS data but aren't in the tree, these seem to only be hybrids.
-        unknown_cases = [c for c in missing_values['accepted_species'].values if c not in cols_for_distance_df]
-        assert len(unknown_cases) < 200
-        missing_values = missing_values[missing_values['accepted_species'].isin(cols_for_distance_df)]
-
-        # in this case reduce computation load
-        njobs = 1
-        verbose = 1
 
     target_name = missing_values.columns[1]
     train = missing_values[~missing_values[target_name].isna()]
