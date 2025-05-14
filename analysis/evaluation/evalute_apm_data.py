@@ -1,23 +1,18 @@
 import os
 
 import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
 
-from analysis.evaluation.compare_different_ev_models import bin_model_names, cont_model_names, rename_models_and_ev_models, binary_model_order
+from analysis.evaluation.compare_different_ev_models import bin_model_names, rename_models_and_ev_models, binary_model_order
 from analysis.evaluation.evaluate_score_outputs import collate_simulation_outputs, output_results_from_df
-from analysis.imputation.helper_functions import missingness_types
-import seaborn as sns
+
 
 def evaluate_all_combinations():
-    binary_df = pd.DataFrame()
 
-    for m in missingness_types:
-        print(m)
-        ### Standard
-        bin_standard_df = collate_simulation_outputs('my_apm_data', 'binary', m,range_to_eval=1)
-
-        binary_df = pd.concat([binary_df, bin_standard_df])
+    binary_df = collate_simulation_outputs('my_apm_data', 'binary', 'mcar', range_to_eval=10)
     output_results_from_df(binary_df, os.path.join('outputs', 'my_apm_data'), 'binary')
+
 
 def plot_binary_cases(bin_df, out_dir):
     sns.set_theme()
@@ -37,8 +32,9 @@ def plot_binary_cases(bin_df, out_dir):
     plt.savefig(os.path.join(out_dir, 'binary_means.jpg'), dpi=300)
     plt.close()
 
+
 if __name__ == '__main__':
     evaluate_all_combinations()
     bin_df = pd.read_csv(os.path.join('outputs', 'my_apm_data', 'results.csv'))[bin_model_names + ['EV Model', 'Missing Type']]
 
-    plot_binary_cases(bin_df, os.path.join('outputs','my_apm_data'))
+    plot_binary_cases(bin_df, os.path.join('outputs', 'my_apm_data'))

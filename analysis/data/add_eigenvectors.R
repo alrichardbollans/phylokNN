@@ -39,22 +39,22 @@ decompose_tree <- function(sim_folder){
   write.csv(param_df,file.path(sim_folder,"broken_stick_parameters.csv"))
 }
 
-for(i in 1:100){
-  print(i)
-  # decompose_tree(file.path('simulations', 'binary', i))
-  # decompose_tree(file.path('simulations', 'continuous', i))
-  # 
-  # decompose_tree(file.path('non_standard_simulations','BMT', 'continuous', i))
-  # decompose_tree(file.path('non_standard_simulations','EB', 'continuous', i))
-  # 
-  # decompose_tree(file.path('non_standard_simulations','BISSE', 'binary', i))
-  # decompose_tree(file.path('non_standard_simulations','HISSE', 'binary', i))
-  # 
-  # decompose_tree(file.path('non_ultrametric_simulations','Extinct_BMT', 'binary', i))
-  # decompose_tree(file.path('non_ultrametric_simulations','Extinct_BMT', 'continuous', i))
-  
-  # decompose_tree(file.path('real_data','binary', i))
-  # decompose_tree(file.path('real_data','continuous', i))
-}
+# for(i in 1:100){
+#   print(i)
+#   # decompose_tree(file.path('simulations', 'binary', i))
+#   # decompose_tree(file.path('simulations', 'continuous', i))
+#   # 
+#   # decompose_tree(file.path('non_standard_simulations','BMT', 'continuous', i))
+#   # decompose_tree(file.path('non_standard_simulations','EB', 'continuous', i))
+#   # 
+#   # decompose_tree(file.path('non_standard_simulations','BISSE', 'binary', i))
+#   # decompose_tree(file.path('non_standard_simulations','HISSE', 'binary', i))
+#   # 
+#   # decompose_tree(file.path('non_ultrametric_simulations','Extinct_BMT', 'binary', i))
+#   # decompose_tree(file.path('non_ultrametric_simulations','Extinct_BMT', 'continuous', i))
+#   
+#   # decompose_tree(file.path('real_data','binary', i))
+#   # decompose_tree(file.path('real_data','continuous', i))
+# }
 
 
