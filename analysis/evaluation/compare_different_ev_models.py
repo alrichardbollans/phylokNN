@@ -54,6 +54,13 @@ def check_scales():
     sns.boxplot(plot_df)
     plt.show()
 
+def output_df(df, bin_or_cont, out_dir):
+    for ev_model in df['EV Model'].unique():
+        ev_df = df[df['EV Model'] == ev_model]
+        ev_df =ev_df.sort_values(by=['Mean Loss'])
+        filename = "".join(x for x in ev_model if x.isalnum())
+        ev_df.to_csv(os.path.join(out_dir,bin_or_cont,f'{filename}_mean_results.csv'))
+
 
 def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     sns.set_theme()
@@ -67,7 +74,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
 
     ev_order = ['ARD/SYM/ER', 'BISSE', 'HISSE', 'BMT †', 'MPNS']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
-
+    output_df(p_df, 'binary',out_dir)
     g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order)
 
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
@@ -96,6 +103,8 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
 
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'continuous_means.jpg'), dpi=300)
+    output_df(p_df, 'continuous',out_dir)
+
 
 
 def main():
