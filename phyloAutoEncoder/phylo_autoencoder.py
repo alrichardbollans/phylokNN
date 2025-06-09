@@ -2,6 +2,7 @@ import os
 
 import keras
 import pandas as pd
+import visualkeras
 from keras import callbacks
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
@@ -50,15 +51,32 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
     # Compile the model
     autoencoder.compile(optimizer='adam', loss='mse')
 
+    if plot:
+        ## Display of the model
+        # Followed https://github.com/keras-team/keras/issues/10638#issuecomment-450605726 to improve plot.
+        keras.utils.plot_model(autoencoder, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder.png'), show_shapes=True,
+                               show_dtype=False,
+                               show_layer_names=True,
+                               rankdir='TB',
+                               expand_nested=True,
+                               dpi=300
+                               )
+
+        from PIL import ImageFont
+        font = ImageFont.load_default()
+        visualkeras.layered_view(autoencoder, legend=True, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_visual.png'),font=font)
+        visualkeras.graph_view(autoencoder,ellipsize_after=50, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_graph.png'),)
+
+    return
     X_train, X_val = train_test_split(distance_data, test_size=0.2)
 
     # Train the model
     # the task is to encode the given dataset.
-    history = autoencoder.fit(X_train, X_train, callbacks=[_early_stopping], epochs=1000,
+    history = autoencoder.fit(X_train, X_train, callbacks=[_early_stopping], epochs=5,
                               batch_size=32, shuffle=True,
                               validation_data=(X_val, X_val), verbose=0)
 
-    # predicted_X_val = autoencoder.predict(X_val)
+    predicted_X_val = autoencoder.predict(X_val)
 
     # Define encoder model
     encoder_model = keras.Model(inputs=autoencoder.layers[0].input, outputs=autoencoder.get_layer('encoder').output)
@@ -77,14 +95,6 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
         baseline_df.to_csv(os.path.join(_output_dir, 'autoencoder_metrics.csv'))
 
         if plot:
-            ## Display of the model
-            keras.utils.plot_model(autoencoder, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder.png'), show_shapes=True,
-                                   show_dtype=True,
-                                   show_layer_names=True,
-                                   rankdir='TB',
-                                   expand_nested=True,
-                                   dpi=300
-                                   )
 
             # Plot the learning progression
             plt.plot(history.history['loss'], label='train_loss')

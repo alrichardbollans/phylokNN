@@ -10,8 +10,9 @@ repo_path = Sys.getenv('KEWSCRATCHPATH')
 species_tree = ape::read.tree(file.path(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs',
                                         'Species', 'Uphylomaker_species_tree.tre'))
 
-# Data from APM Traits v1.12.1 (WCVP v12)
-binary_data = read.csv(file.path('my_apm_data', 'binary', 'compiled_extraction_apm_data.csv'))
+db_path = Sys.getenv('KEWDROPBOXPATH')
+# Data from APM Traits
+binary_data = read.csv(file.path(db_path, 'ApmTraits', 'apm_activity','outputs','compiled_extraction_apm_data.csv'))
 binary_data['accepted_species'] <- lapply(binary_data['accepted_species'], replace_space_with_underscore_in_name)
 
 accepted_species = binary_data$accepted_species

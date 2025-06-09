@@ -106,11 +106,24 @@ set_up <- function(real_or_sim, bin_or_cont, iteration, missing_type){
               target=target, non_missing_data=non_missing_data, skfolds=skfolds, training_tree=training_tree, unique_target=unique_target))
 }
 
-calculate_brier <- function(f_t,o_t){
-  return(mean((f_t - o_t)^2))
+calculate_brier <- function(y_score,y_true){
+  return(mean((y_score - y_true)^2))
 }
 
-run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type){
+calculate_inverse_AP <- function(y_score,y_true){
+    library(reticulate)
+  use_virtualenv("~/Documents/virtual_environments/scratch_interpreter")
+  sklearn <- import("sklearn")
+  score = -sklearn$metrics$average_precision_score(y_true, y_score)
+  print('AP:')
+  print(score)
+  return(score)
+}
+
+run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type, scorer){
+    if (missing(scorer)) {
+      scorer = 'brier'
+    }
     setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
     labelled_tree = setup_$labelled_tree
     missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
@@ -155,7 +168,14 @@ run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type)
                 
                 f_t = df_merge$`1`
                 o_t = as.numeric(df_merge[[target]])
-                brier_score_for_this_fold = calculate_brier(f_t,o_t)
+                if (scorer == 'brier') {
+                  brier_score_for_this_fold = calculate_brier(f_t,o_t)
+                } else if( scorer == 'AP'){
+                  brier_score_for_this_fold = calculate_inverse_AP(f_t,o_t)
+                } else{
+                  stop('Incorrectly specified scorer')
+                }
+                
                 if(!is.na(brier_score_for_this_fold)){
                   brier_score_for_this_config = brier_score_for_this_config + brier_score_for_this_fold
                   number_of_successful_folds = number_of_successful_folds+1
@@ -284,7 +304,10 @@ run_picante_instance<- function(bin_or_cont,trait_data,target,plants_to_predict,
   return(output_data)
 }
 
-run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type){
+run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type, scorer){
+  if (missing(scorer)) {
+    scorer = 'brier'
+  }
   setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
   labelled_tree = setup_$labelled_tree
   if(!ape::is.binary(labelled_tree)){
@@ -332,7 +355,13 @@ run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type
               if (bin_or_cont == "binary") {
                 f_t = as.numeric(df_merge$`1`)
                 o_t = as.numeric(df_merge[[target]])
-                brier_score_for_this_fold = calculate_brier(f_t,o_t)
+                if (scorer == 'brier') {
+                  brier_score_for_this_fold = calculate_brier(f_t,o_t)
+                } else if( scorer == 'AP'){
+                  brier_score_for_this_fold = calculate_inverse_AP(f_t,o_t)
+                } else{
+                  stop('Incorrectly specified scorer')
+                }
                 if(!is.na(brier_score_for_this_fold)){
                   score_for_this_config = score_for_this_config + brier_score_for_this_fold
                   number_of_successful_folds = number_of_successful_folds+1

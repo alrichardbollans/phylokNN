@@ -7,7 +7,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import check_is_fitted, validate_data
 
-from phyloKNN import get_first_column
+from phylokNN import get_first_column
 
 
 class PhylNearestNeighbours(BaseEstimator):

@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.metrics import make_scorer, mean_absolute_error, brier_score_loss
 from sklearn.model_selection import KFold
 
-from phyloKNN import nan_safe_metric_wrapper, phyloNN_bayes_opt, PhylNearestNeighbours
+from phylokNN import nan_safe_metric_wrapper, phyloNN_bayes_opt, PhylNearestNeighbours
 
 repo_path = os.environ.get('KEWSCRATCHPATH')
 input_data_path = os.path.join(repo_path, 'phyloKNN', 'analysis', 'data')
@@ -19,6 +19,7 @@ nonstandard_sim_types = {'BMT': 'continuous', 'EB': 'continuous', 'BISSE': 'bina
 extinct_sim_types = ['Extinct_BMT']
 
 n_split_for_nested_cv = 5
+
 
 def get_iteration_path_from_base(base: str, real_or_sim: str, bin_or_cont: str, iteration: int):
     if real_or_sim == 'real_data' or real_or_sim == 'simulations' or real_or_sim == 'my_apm_data':
@@ -69,25 +70,26 @@ def check_data(ground_truth, missing_values):
     assert len(mcar_nans) < len(missing_values)
 
 
-def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str):
+def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str, val_scorer=None):
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
     ground_truth = pd.read_csv(os.path.join(data_path, 'ground_truth.csv'))
     missing_values = pd.read_csv(os.path.join(data_path, f'{missing_type}_values.csv'))
     check_data(ground_truth, missing_values)
 
     distance_csv = os.path.join(data_path, 'tree_distances.csv')
-
+    if val_scorer is None:
+        if bin_or_cont == 'continuous':
+            val_scorer = make_scorer(nan_safe_metric_wrapper(mean_absolute_error), greater_is_better=False)
+        elif bin_or_cont == 'binary':
+            val_scorer = make_scorer(nan_safe_metric_wrapper(brier_score_loss), greater_is_better=False, response_method='predict_proba')
+        else:
+            raise ValueError(f'Unknown data type {bin_or_cont}')
     if bin_or_cont == 'continuous':
         clf = False
-        val_scorer = make_scorer(nan_safe_metric_wrapper(mean_absolute_error), greater_is_better=False)
-
-
     elif bin_or_cont == 'binary':
         clf = True
-        val_scorer = make_scorer(nan_safe_metric_wrapper(brier_score_loss), greater_is_better=False, response_method='predict_proba')
     else:
         raise ValueError(f'Unknown data type {bin_or_cont}')
-
     out_dir = get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type)
     pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
 
@@ -106,7 +108,8 @@ def phylnn_predict(real_or_sim: str, bin_or_cont: str, iteration: int, missing_t
     best_ratio, best_kappa = phyloNN_bayes_opt(
         distance_df,
         clf=clf,
-        scorer=val_scorer, cv=KFold(n_splits=n_split_for_nested_cv, shuffle=True, random_state=42), X=train, y=train[target_name].values, njobs=njobs, verbose=verbose)
+        scorer=val_scorer, cv=KFold(n_splits=n_split_for_nested_cv, shuffle=True, random_state=42), X=train, y=train[target_name].values, njobs=njobs,
+        verbose=verbose)
 
     best_phyln_fill_means = PhylNearestNeighbours(distance_df, clf, ratio_max_branch_length=best_ratio, kappa=best_kappa,
                                                   fill_in_unknowns_with_mean=True)

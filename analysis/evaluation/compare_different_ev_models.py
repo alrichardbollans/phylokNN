@@ -1,4 +1,5 @@
 import os
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ bin_model_names = get_model_names('binary')
 bin_model_names.remove('phylnn_raw')
 cont_model_names = get_model_names('continuous')
 cont_model_names.remove('phylnn_raw')
-rename_models_and_ev_models = {'phylnn_fill_means': 'phyloKNN', 'logit_eigenvecs': 'Eigenvec (L)', 'logit_umap': 'UMAP (L)',
+rename_models_and_ev_models = {'phylnn_fill_means': 'phylokNN', 'logit_eigenvecs': 'Eigenvec (L)', 'logit_umap': 'UMAP (L)',
                                'logit_umap_supervised': 'UMAP* (L)', 'logit_autoencoded': 'Autoenc (L)', 'logit_autoenc_supervised': 'Autoenc* (L)',
                                'xgb_eigenvecs': 'Eigenvec (XGB)', 'xgb_umap': 'UMAP (XGB)',
                                'xgb_umap_supervised': 'UMAP* (XGB)', 'xgb_autoencoded': 'Autoenc (XGB)', 'xgb_autoenc_supervised': 'Autoenc* (XGB)',
@@ -21,10 +22,10 @@ rename_models_and_ev_models = {'phylnn_fill_means': 'phyloKNN', 'logit_eigenvecs
                                'linear_autoenc_supervised': 'Autoenc* (L)',
                                }
 
-binary_model_order = ['corHMM', 'picante', 'phyloKNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)', 'UMAP (XGB)', 'UMAP* (XGB)',
+binary_model_order = ['corHMM', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)', 'UMAP (XGB)', 'UMAP* (XGB)',
                       'Autoenc (L)', 'Autoenc* (L)', 'Autoenc (XGB)', 'Autoenc* (XGB)']
 
-continuous_model_order = ['phylopars', 'picante', 'phyloKNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP (XGB)',
+continuous_model_order = ['phylopars', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP (XGB)',
                           'Autoenc (L)', 'Autoenc (XGB)']
 
 
@@ -54,12 +55,14 @@ def check_scales():
     sns.boxplot(plot_df)
     plt.show()
 
-def output_df(df, bin_or_cont, out_dir):
-    for ev_model in df['EV Model'].unique():
-        ev_df = df[df['EV Model'] == ev_model]
+def output_df(df, bin_or_cont, out_dir, group:str = 'EV Model'):
+    for ev_model in df[group].unique():
+        ev_df = df[df[group] == ev_model]
         ev_df =ev_df.sort_values(by=['Mean Loss'])
         filename = "".join(x for x in ev_model if x.isalnum())
-        ev_df.to_csv(os.path.join(out_dir,bin_or_cont,f'{filename}_mean_results.csv'))
+        out_path = os.path.join(out_dir,bin_or_cont)
+        pathlib.Path(out_path).mkdir(exist_ok=True, parents=True)
+        ev_df.to_csv(os.path.join(out_path,f'{filename}_mean_results.csv'))
 
 
 def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):

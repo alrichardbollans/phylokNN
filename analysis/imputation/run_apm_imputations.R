@@ -1,7 +1,7 @@
 library(doParallel)
 library(foreach)
 
-num_cores <- detectCores() - 1  # Use all but one core
+num_cores <- detectCores() - 2  # Use all but one core
 cl <- makeCluster(num_cores)
 registerDoParallel(cl)
 
@@ -15,8 +15,8 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
   for (missing_type in missingness_types) {  # Keep the inner loop sequential
     
     # Binary cases
-    run_picante_models('my_apm_data', 'binary', iter, missing_type)
-    run_corHMM_models('my_apm_data', 'binary', iter, missing_type)
+    run_picante_models('my_apm_data', 'binary', iter, missing_type, 'AP')
+    run_corHMM_models('my_apm_data', 'binary', iter, missing_type, 'AP')
     
   }
 }

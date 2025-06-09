@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import brier_score_loss, accuracy_score, mean_squared_error
 
-from phyloKNN import get_first_column, nan_safe_metric_wrapper
+from phylokNN import get_first_column, nan_safe_metric_wrapper
 
 
 class test_arrays(unittest.TestCase):

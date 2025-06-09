@@ -30,7 +30,7 @@ linear_init_kwargs = {}
 linear_grid_search_params = {}
 
 
-def fit_and_output(clf_instance, grid_search_param_grid, out_dir, model_name, full_df, encoding_vars, target_name, bin_or_cont):
+def fit_and_output(clf_instance, grid_search_param_grid, out_dir, model_name, full_df, encoding_vars, target_name, bin_or_cont, scorer=None):
     assert target_name not in encoding_vars
     X_test = full_df[full_df[target_name].isna()]
     X_train = full_df[~full_df[target_name].isna()]
@@ -49,13 +49,15 @@ def fit_and_output(clf_instance, grid_search_param_grid, out_dir, model_name, fu
         else:
             raise ValueError(f'Unexpected unique values: {values}')
     else:
+        if scorer is None:
+            if bin_or_cont == 'binary':
+                scorer = 'neg_brier_score'
+            elif bin_or_cont == 'continuous':
+                scorer = 'neg_mean_absolute_error'
         if bin_or_cont == 'binary':
-            scorer = 'neg_brier_score'
             cv = StratifiedKFold(n_splits=n_split_for_nested_cv, shuffle=True, random_state=53)
         elif bin_or_cont == 'continuous':
-            scorer = 'neg_mean_absolute_error'
             cv = KFold(n_splits=n_split_for_nested_cv, shuffle=True, random_state=53)
-
         gs = GridSearchCV(
             estimator=clf_instance,
             param_grid=grid_search_param_grid,

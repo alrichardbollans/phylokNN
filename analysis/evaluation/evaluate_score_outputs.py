@@ -54,7 +54,7 @@ def get_model_names(bin_or_cont):
         raise ValueError(f'Unknown data type {bin_or_cont}')
 
 
-def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str, drop_nans=False):
+def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_type: str, drop_nans=False, scorer=None):
     data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
     out_dict = {}
 
@@ -85,14 +85,17 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
 
     dfs = []
     for model_name in model_names:
-        model_df = pd.read_csv(os.path.join(imputation_path, f'{model_name}.csv'), index_col=0)
-        if bin_or_cont == 'binary':
-            assert len(model_df.columns) == 2
-            model_df = model_df[['1']]
-        elif bin_or_cont == 'continuous':
-            assert len(model_df.columns) == 1
-        model_df.columns = [model_name]
-        dfs.append(model_df)
+        try:
+            model_df = pd.read_csv(os.path.join(imputation_path, f'{model_name}.csv'), index_col=0)
+            if bin_or_cont == 'binary':
+                assert len(model_df.columns) == 2
+                model_df = model_df[['1']]
+            elif bin_or_cont == 'continuous':
+                assert len(model_df.columns) == 1
+            model_df.columns = [model_name]
+            dfs.append(model_df)
+        except FileNotFoundError:
+            print(f'Missing {model_name} for {real_or_sim} {bin_or_cont} {iteration} {missing_type}')
     try:
         check_prediction_data(dfs, ground_truth, missing_values)
     except AssertionError as m:
@@ -119,19 +122,23 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
     if len(full_df) > 0:
         for model_name in model_names:
             if model_name in full_df.columns:
-                if bin_or_cont == 'binary':
-                    score = brier_score_loss(full_df[gt_target_name], full_df[model_name])
-                elif bin_or_cont == 'continuous':
-                    score = mean_absolute_error(full_df[gt_target_name], full_df[model_name])
+                if scorer is None:
+                    if bin_or_cont == 'binary':
+                        score = brier_score_loss(full_df[gt_target_name], full_df[model_name])
+                    elif bin_or_cont == 'continuous':
+                        score = mean_absolute_error(full_df[gt_target_name], full_df[model_name])
+                else:
+                    print(f'Using {scorer.__name__} for {model_name}')
+                    score = scorer(full_df[gt_target_name], full_df[model_name])
                 out_dict[model_name] = score
     return out_dict
 
 
-def plot_results(df, model_names, out_dir, tag):
+def plot_results(df, model_names, out_dir, tag, scorer_label):
     plot_df = df[model_names]
     sns.boxplot(data=plot_df)
     plt.xticks(rotation=30, ha='right')
-    plt.ylabel('Loss')
+    plt.ylabel(scorer_label)
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, f'{tag}violin_plot.jpg'), dpi=300)
     plt.clf()
@@ -150,7 +157,7 @@ def plot_results(df, model_names, out_dir, tag):
     #         plt.close()
 
 
-def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool = False):
+def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool = False, scorer_label = 'Loss'):
     if drop_nans:
         raise NotImplementedError('This is implemented but just clutters the results.')
     full_df = full_df.reset_index(drop=True)
@@ -177,22 +184,22 @@ def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str
     # Save to CSV
     ttest_df.to_csv(os.path.join(out_dir, f'{tag}ttest_results.csv'))
 
-    plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, tag)
+    plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, tag, scorer_label=scorer_label)
 
 
 def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type: str, drop_nans=False,
-                               range_to_eval: int = number_of_simulation_iterations):
+                               range_to_eval: int = number_of_simulation_iterations, scorer=None):
     if drop_nans:
         raise NotImplementedError('This is implemented but just clutters the results.')
     full_df = pd.DataFrame()
     for tag in range(1, range_to_eval + 1):
-        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans)
+        run_dict = evaluate_output(real_or_sim, bin_or_cont, tag, missing_type, drop_nans, scorer=scorer)
         run_df = pd.DataFrame(run_dict, index=[tag])
         full_df = pd.concat([full_df, run_df])
     out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
     full_df['EV Model'] = real_or_sim
     full_df['Missing Type'] = missing_type
-    output_results_from_df(full_df, out_dir, bin_or_cont, drop_nans)
+    output_results_from_df(full_df, out_dir, bin_or_cont, drop_nans,scorer_label=scorer.__name__ if scorer is not None else 'Loss')
 
     return full_df
 
@@ -204,32 +211,40 @@ def evaluate_all_combinations():
 
     for m in missingness_types:
         print(m)
+        m_binary_df = pd.DataFrame()
+        m_continuous_df = pd.DataFrame()
         ### Standard
         bin_standard_df = collate_simulation_outputs('simulations', 'binary', m)
 
         binary_df = pd.concat([binary_df, bin_standard_df])
+        m_binary_df = pd.concat([m_binary_df, bin_standard_df])
 
         cont_standard_df = collate_simulation_outputs('simulations', 'continuous', m)
 
         cont_df = pd.concat([cont_df, cont_standard_df])
+        m_continuous_df = pd.concat([m_continuous_df, cont_standard_df])
 
         ### real data
         bin_real_df = collate_simulation_outputs('real_data', 'binary', m)
 
         binary_df = pd.concat([binary_df, bin_real_df])
+        m_binary_df = pd.concat([m_binary_df, bin_real_df])
 
         cont_real_df = collate_simulation_outputs('real_data', 'continuous', m)
 
         cont_df = pd.concat([cont_df, cont_real_df])
+        m_continuous_df = pd.concat([m_continuous_df, cont_real_df])
 
         ### Extincts
         bin_extinct_df = collate_simulation_outputs('Extinct_BMT', 'binary', m)
 
         binary_df = pd.concat([binary_df, bin_extinct_df])
+        m_binary_df = pd.concat([m_binary_df, bin_extinct_df])
 
         cont_extinct_df = collate_simulation_outputs('Extinct_BMT', 'continuous', m)
 
         cont_df = pd.concat([cont_df, cont_extinct_df])
+        m_continuous_df = pd.concat([m_continuous_df, cont_extinct_df])
 
         # Nonstandard Simulations
         for sim_type in nonstandard_sim_types:
@@ -238,9 +253,13 @@ def evaluate_all_combinations():
 
             if bin_or_cont == 'binary':
                 binary_df = pd.concat([binary_df, sim_type_df])
+                m_binary_df = pd.concat([m_binary_df, sim_type_df])
 
             if bin_or_cont == 'continuous':
                 cont_df = pd.concat([cont_df, sim_type_df])
+                m_continuous_df = pd.concat([m_continuous_df, sim_type_df])
+        output_results_from_df(m_binary_df, os.path.join('outputs', f'{m}_binary'), 'binary')
+        output_results_from_df(m_continuous_df, os.path.join('outputs', f'{m}_continuous'), 'continuous')
 
     output_results_from_df(binary_df, os.path.join('outputs', 'binary'), 'binary')
 
