@@ -1,0 +1,10 @@
+,Missing Type,Model,Mean Loss
+1,phyloNa,phylopars,0.4994063420674215
+3,phyloNa,picante,0.5006506521711298
+13,phyloNa,Eigenvec (XGB),0.5533931518756549
+17,phyloNa,Autoenc (XGB),0.5612483118698965
+15,phyloNa,UMAP (XGB),0.5869294656764222
+5,phyloNa,phylokNN,0.6956151348700867
+11,phyloNa,Autoenc (L),0.7105104263911685
+9,phyloNa,UMAP (L),0.728131514924291
+7,phyloNa,Eigenvec (L),0.9595413551677082
