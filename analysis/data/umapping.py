@@ -10,15 +10,20 @@ from analysis.imputation.helper_functions import number_of_simulation_iterations
 reduction_factor = 0.1
 
 
-def unsupervised(dir_path: str, reduction_fraction=reduction_factor):
-    distances = pd.read_csv(os.path.join(dir_path, 'tree_distances.csv'), index_col=0)
-
+def umap_distances(distances: pd.DataFrame, reduction_fraction=reduction_factor):
     scaled_penguin_data = StandardScaler().fit_transform(distances)
 
     reducer = umap.UMAP(n_components=int(len(distances.columns) * reduction_fraction))
 
     embedding = reducer.fit_transform(scaled_penguin_data)
     umap_embedding = pd.DataFrame(embedding, index=distances.index)
+    return umap_embedding
+
+
+def unsupervised(dir_path: str, reduction_fraction=reduction_factor):
+    distances = pd.read_csv(os.path.join(dir_path, 'tree_distances.csv'), index_col=0)
+
+    umap_embedding = umap_distances(distances, reduction_fraction)
     umap_embedding.to_csv(os.path.join(dir_path, 'umap_unsupervised_embedding.csv'))
 
 

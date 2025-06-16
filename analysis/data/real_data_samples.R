@@ -35,6 +35,8 @@ for (fam in FAMILIES_OF_INTEREST) {
   continuous_trait = BIEN::BIEN_trait_traitbyfamily(family=fam, trait='seed mass')
   cont_df = rbind(cont_df,continuous_trait)
 }
+to_cite = BIEN::BIEN_metadata_citation(trait.dataframe=cont_df, bibtex_file = 'bien.bib', acknowledgement_file='bien.txt')
+articles = to_cite$references
 
 ## Tidy the collected data a bit
 clean_df = cont_df[c("scrubbed_species_binomial", 'trait_value', 'unit')]

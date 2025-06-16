@@ -10,7 +10,6 @@ from analysis.evaluation.evaluate_score_outputs import collate_simulation_output
 
 
 def evaluate_all_combinations():
-
     binary_df = collate_simulation_outputs('my_apm_data', 'binary', 'mcar', range_to_eval=10, scorer=average_precision_score)
     output_results_from_df(binary_df, os.path.join('outputs', 'my_apm_data'), 'binary', scorer_label='AP')
 
@@ -35,11 +34,14 @@ def plot_binary_cases(bin_df, out_dir):
 
 
 if __name__ == '__main__':
-    evaluate_all_combinations()
     bin_model_names.remove('logit_umap_supervised')
     bin_model_names.remove('xgb_umap_supervised')
     bin_model_names.remove('logit_autoenc_supervised')
     bin_model_names.remove('xgb_autoenc_supervised')
+    bin_model_names += ['logit_eigenvecs_full_tree', 'logit_umap_full_tree', 'logit_autoencoded_full_tree',
+                        'xgb_eigenvecs_full_tree', 'xgb_umap_full_tree', 'xgb_autoencoded_full_tree']
+    evaluate_all_combinations()
+
     bin_df = pd.read_csv(os.path.join('outputs', 'my_apm_data', 'results.csv'))[bin_model_names + ['EV Model', 'Missing Type']]
 
     plot_binary_cases(bin_df, os.path.join('outputs', 'my_apm_data'))

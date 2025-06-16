@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 from scipy.stats import ttest_rel
 from sklearn.metrics import brier_score_loss, mean_absolute_error
 
+from analysis.evaluation.compare_different_ev_models import bin_model_names, cont_model_names
 from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, nonstandard_sim_types, \
     number_of_simulation_iterations
 
@@ -38,13 +39,8 @@ def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, m
 
 
 def get_model_names(bin_or_cont):
-    bin_model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
-                       'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded', 'logit_autoenc_supervised',
-                       'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised', 'xgb_autoencoded', 'xgb_autoenc_supervised']
-    cont_model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
-                        'linear_eigenvecs', 'linear_umap', 'linear_autoencoded',
-                        'xgb_eigenvecs', 'xgb_umap', 'xgb_autoencoded']
     if bin_or_cont == 'binary':
+
         return bin_model_names
     elif bin_or_cont == 'continuous':
         return cont_model_names
@@ -118,7 +114,8 @@ def evaluate_output(real_or_sim: str, bin_or_cont: str, iteration: int, missing_
         pd.testing.assert_series_equal(full_df['phylnn_raw'], full_df['phylnn_fill_means'], check_names=False)
         full_df = full_df.drop('phylnn_fill_means', axis=1)
     else:
-        full_df = full_df.drop('phylnn_raw', axis=1)
+        if 'phylnn_raw' in full_df:
+            full_df = full_df.drop('phylnn_raw', axis=1)
     if len(full_df) > 0:
         for model_name in model_names:
             if model_name in full_df.columns:
@@ -157,7 +154,7 @@ def plot_results(df, model_names, out_dir, tag, scorer_label):
     #         plt.close()
 
 
-def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool = False, scorer_label = 'Loss'):
+def output_results_from_df(full_df: pd.DataFrame, out_dir: str, bin_or_cont: str, drop_nans: bool = False, scorer_label='Loss'):
     if drop_nans:
         raise NotImplementedError('This is implemented but just clutters the results.')
     full_df = full_df.reset_index(drop=True)
@@ -199,7 +196,7 @@ def collate_simulation_outputs(real_or_sim: str, bin_or_cont: str, missing_type:
     out_dir = os.path.join('outputs', real_or_sim, bin_or_cont, missing_type)
     full_df['EV Model'] = real_or_sim
     full_df['Missing Type'] = missing_type
-    output_results_from_df(full_df, out_dir, bin_or_cont, drop_nans,scorer_label=scorer.__name__ if scorer is not None else 'Loss')
+    output_results_from_df(full_df, out_dir, bin_or_cont, drop_nans, scorer_label=scorer.__name__ if scorer is not None else 'Loss')
 
     return full_df
 

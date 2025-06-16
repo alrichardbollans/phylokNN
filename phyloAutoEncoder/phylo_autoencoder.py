@@ -7,18 +7,23 @@ from keras import callbacks
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 
 def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fraction: float, _output_dir: str = None, plot=False):
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # If  want to use CPU as GPU doesn't have enough memory
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # If  want to use CPU as GPU doesn't have enough memory
 
+    ### Scale the data
+    scaled_distance_data = pd.DataFrame(StandardScaler().fit_transform(distance_data), index=distance_data.index, columns=distance_data.columns)
+    print(scaled_distance_data.shape)
+    print(scaled_distance_data.head(5))
     _early_stopping = callbacks.EarlyStopping(
         monitor='val_loss',
         patience=10,
         restore_best_weights=True)
 
     # Define input dimensions
-    input_dim = distance_data.shape[1]
+    input_dim = scaled_distance_data.shape[1]
 
     def create_autoencoder(_input_dim: int, encoded_dim: int):
         """
@@ -45,7 +50,7 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
         return autoencoder
 
     # Create the autoencoder model
-    encoding_dim = int(len(distance_data.columns) * reduction_fraction)
+    encoding_dim = int(len(scaled_distance_data.columns) * reduction_fraction)
     autoencoder = create_autoencoder(input_dim, encoded_dim=encoding_dim)
 
     # Compile the model
@@ -67,12 +72,11 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
         visualkeras.layered_view(autoencoder, legend=True, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_visual.png'),font=font)
         visualkeras.graph_view(autoencoder,ellipsize_after=50, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_graph.png'),)
 
-    return
-    X_train, X_val = train_test_split(distance_data, test_size=0.2)
+    X_train, X_val = train_test_split(scaled_distance_data, test_size=0.2)
 
     # Train the model
     # the task is to encode the given dataset.
-    history = autoencoder.fit(X_train, X_train, callbacks=[_early_stopping], epochs=5,
+    history = autoencoder.fit(X_train, X_train, callbacks=[_early_stopping], epochs=1000,
                               batch_size=32, shuffle=True,
                               validation_data=(X_val, X_val), verbose=0)
 
@@ -81,15 +85,15 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
     # Define encoder model
     encoder_model = keras.Model(inputs=autoencoder.layers[0].input, outputs=autoencoder.get_layer('encoder').output)
 
-    encoded = encoder_model.predict(distance_data)
+    encoded = encoder_model.predict(scaled_distance_data)
 
     ### Outputs
     best_train_loss = history.history['loss'][-1]
     best_val_loss = history.history['val_loss'][-1]
     if _output_dir is not None:
-        mean_example = distance_data.mean().to_frame().T
-        full_mean_df = pd.concat([mean_example] * len(distance_data.index), ignore_index=True)
-        mean_loss = mean_squared_error(distance_data, full_mean_df)
+        mean_example = scaled_distance_data.mean().to_frame().T
+        full_mean_df = pd.concat([mean_example] * len(scaled_distance_data.index), ignore_index=True)
+        mean_loss = mean_squared_error(scaled_distance_data, full_mean_df)
         baseline_df = pd.DataFrame([[mean_loss, best_train_loss, best_val_loss, len(history.history['loss']), encoding_dim]],
                                    columns=['Baseline mse', 'train_loss', 'val_loss', 'number_of_epochs', 'latent space size'])
         baseline_df.to_csv(os.path.join(_output_dir, 'autoencoder_metrics.csv'))
@@ -114,7 +118,7 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
                                    dpi=300
                                    )
 
-    return encoder_model, pd.DataFrame(encoded, index=distance_data.index)
+    return encoder_model, pd.DataFrame(encoded, index=scaled_distance_data.index)
 
 
 if __name__ == '__main__':
