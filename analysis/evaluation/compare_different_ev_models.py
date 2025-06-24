@@ -13,8 +13,8 @@ bin_model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
                    'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised', 'xgb_autoencoded', 'xgb_autoenc_supervised']
 bin_model_names.remove('phylnn_raw')
 cont_model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
-                        'linear_eigenvecs', 'linear_umap', 'linear_autoencoded',
-                        'xgb_eigenvecs', 'xgb_umap', 'xgb_autoencoded']
+                    'linear_eigenvecs', 'linear_umap', 'linear_autoencoded',
+                    'xgb_eigenvecs', 'xgb_umap', 'xgb_autoencoded']
 cont_model_names.remove('phylnn_raw')
 rename_models_and_ev_models = {'phylnn_fill_means': 'phylokNN', 'logit_eigenvecs': 'Eigenvec (L)', 'logit_umap': 'UMAP (L)',
                                'logit_umap_supervised': 'UMAP* (L)', 'logit_autoencoded': 'Autoenc (L)', 'logit_autoenc_supervised': 'Autoenc* (L)',
@@ -82,8 +82,8 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     ev_order = ['ARD/SYM/ER', 'BISSE', 'HISSE', 'BMT †', 'MPNS']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
     output_df(p_df, 'binary', out_dir)
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order)
 
+    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order)
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
@@ -91,6 +91,17 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     )
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'binary_means.jpg'), dpi=300)
+    plt.close()
+
+    # For readability don't plot semisupervised versions here
+    g = sns.barplot(p_df[~p_df['Model'].str.contains('*', regex=False)], x='EV Model', y='Mean Loss', hue='Model')
+    g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    sns.move_legend(
+        g, "lower center",
+        bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
+    )
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_dir, 'binary_means2.jpg'), dpi=300)
     plt.close()
 
     ## do a useful plot
@@ -110,7 +121,18 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
 
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'continuous_means.jpg'), dpi=300)
+    plt.close()
     output_df(p_df, 'continuous', out_dir)
+
+    g = sns.barplot(p_df, x='EV Model', y='Mean Loss', hue='Model')
+    g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+    sns.move_legend(
+        g, "lower center",
+        bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
+    )
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(out_dir, 'continuous_means2.jpg'), dpi=300)
 
 
 def main():
