@@ -98,7 +98,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
-        bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
+        bbox_to_anchor=(.5, 1), ncol=3, title='Model', frameon=False,
     )
     plt.tight_layout()
     plt.savefig(os.path.join(out_dir, 'binary_means2.jpg'), dpi=300)
@@ -128,7 +128,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
-        bbox_to_anchor=(.5, 1), ncol=4, title=None, frameon=False,
+        bbox_to_anchor=(.5, 1), ncol=3, title='Model', frameon=False,
     )
 
     plt.tight_layout()
