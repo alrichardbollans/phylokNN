@@ -30,21 +30,24 @@ get_BMT_sample <- function(){
 get_EB_sample <- function(){
   tree = get_tree()
   # Early Burst (EB) Model
-  #The early burst (EB) model assumes high rates of evolution early in a clade’s history that slow down over time. 
+  #The early burst (EB) model assumes high rates of evolution early in a clade’s history that slow down or speed up over time. 
   # It’s common in adaptive radiations.
-  beta = runif(1, min=-1, max=1)
-  # beta < 0: Evolutionary rate declines over time.
-  # beta > 0: Evolutionary rate increases over time.
-  # beta = 0: Standard BM.
-  trait_EB <- fastBM(tree, sig2=1, a=0, mu=0, beta=beta)
-  trait_EB_scaled = scale(trait_EB)
-  names(trait_EB_scaled) <- names(trait_EB)
+  r = runif(1, min=-1, max=1)
+  # Explanation for this is here: https://www.biorxiv.org/content/10.1101/069518v1.full.pdf
+  # and file:///home/atp/Downloads/RPANDA.pdf
+  modelACDC = RPANDA::createModel(tree, 'ACDC')
+  #method 3 Simulates step-by-step the whole trajectory, but returns only the tip data (to plot change to 2)
+  dataACDC <- RPANDA::simulateTipData(modelACDC, c(0,0,1,r), method=3) #
+  trait_EB_scaled = scale(dataACDC)
+  names(trait_EB_scaled) <- names(dataACDC)
+  # simulateTipData doesn't preserve tip order annoyingly, so fix this
+  sorted = as.data.frame(trait_EB_scaled)[tree$tip.label,]
+  names(sorted)=tree$tip.label
+  ground_truth = data.frame(sorted)
   
-  ground_truth = data.frame(trait_EB_scaled)
   
-  
-  param_dataframe = data.frame(beta=c(beta))
-  # phenogram(tree, trait_EB_scaled, fsize=0.8, main="Early Burst Model")
+  param_dataframe = data.frame(r=c(r))
+  # phenogram(tree, sorted, fsize=0.8, main="Early Burst Model")
   
   
   return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
@@ -123,19 +126,19 @@ get_hisse_sample <- function(){
 }
 
 for(i in 1:number_of_repetitions){
-  BMT_sample = get_BMT_sample()
-  ape::is.ultrametric(BMT_sample$tree)
-  output_simulation(file.path('non_standard_simulations','BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
+  # BMT_sample = get_BMT_sample()
+  # ape::is.ultrametric(BMT_sample$tree)
+  # output_simulation(file.path('non_standard_simulations','BMT'),BMT_sample, BMT_sample$tree,'continuous', i)
 
   EB_sample = get_EB_sample()
   ape::is.ultrametric(EB_sample$tree)
   output_simulation(file.path('non_standard_simulations','EB'),EB_sample, EB_sample$tree,'continuous', i)
 
-  bisse_sample = get_bisse_sample()
-  ape::is.ultrametric(bisse_sample$tree)
-  output_simulation(file.path('non_standard_simulations','BISSE'),bisse_sample, bisse_sample$tree,'binary', i)
-  
-  hisse_sample = get_hisse_sample()
-  ape::is.ultrametric(hisse_sample$tree)
-  output_simulation(file.path('non_standard_simulations','HISSE'),hisse_sample, hisse_sample$tree,'binary', i)
+  # bisse_sample = get_bisse_sample()
+  # ape::is.ultrametric(bisse_sample$tree)
+  # output_simulation(file.path('non_standard_simulations','BISSE'),bisse_sample, bisse_sample$tree,'binary', i)
+  # 
+  # hisse_sample = get_hisse_sample()
+  # ape::is.ultrametric(hisse_sample$tree)
+  # output_simulation(file.path('non_standard_simulations','HISSE'),hisse_sample, hisse_sample$tree,'binary', i)
 }

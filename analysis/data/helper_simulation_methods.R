@@ -1,4 +1,5 @@
 library(TDIP)
+source('add_eigenvectors.R')
 
 output_simulation <- function(base_output_path, simData, tree, tag,id){
   param_df = simData$Dataframe
@@ -83,6 +84,7 @@ output_simulation <- function(base_output_path, simData, tree, tag,id){
   write.csv(param_df, file.path(this_sim_path, 'dataframe_params.csv'))
   
   ape::write.tree(tree, file.path(this_sim_path, 'tree.tre'))
+  decompose_tree(this_sim_path)
 }
 
 
