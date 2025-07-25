@@ -24,7 +24,7 @@ def plot_binary_cases(bin_df, out_dir):
     p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
 
-    g = sns.barplot(p_df, x='Model', y='Mean AP', order=binary_model_order)
+    g = sns.barplot(p_df, x='Model', y='Mean AP', order=binary_model_order + [c for c in p_df['Model'].values if 'Full tree' in c])
 
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
 

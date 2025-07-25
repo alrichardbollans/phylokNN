@@ -28,6 +28,10 @@ rename_models_and_ev_models = {'phylnn_fill_means': 'phylokNN', 'logit_eigenvecs
                                'linear_eigenvecs': 'Eigenvec (L)', 'linear_umap': 'UMAP (L)',
                                'linear_umap_supervised': 'UMAP* (L)', 'linear_autoencoded': 'Autoenc (L)',
                                'linear_autoenc_supervised': 'Autoenc* (L)',
+                               'logit_eigenvecs_full_tree': 'Eigenvec (Full tree) (L)',
+                               'logit_umap_full_tree': 'UMAP (Full tree) (L)', 'logit_autoencoded_full_tree': 'Autoenc (Full tree) (L)',
+                               'xgb_eigenvecs_full_tree': 'Eigenvec (Full tree) (XGB)', 'xgb_umap_full_tree': 'UMAP (Full tree) (XGB)',
+                               'xgb_autoencoded_full_tree': 'Autoenc (Full tree) (XGB)'
                                }
 
 binary_model_order = ['corHMM', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)',
