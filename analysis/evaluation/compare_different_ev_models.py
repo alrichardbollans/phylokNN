@@ -6,29 +6,36 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 
-from analysis.imputation.helper_functions import missingness_types, nonstandard_sim_types, number_of_simulation_iterations
+from analysis.imputation.helper_functions import missingness_types, nonstandard_sim_types, \
+    number_of_simulation_iterations
 
 bin_model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
-                   'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded', 'logit_autoenc_supervised',
+                   'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded',
+                   'logit_autoenc_supervised',
                    'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised', 'xgb_autoencoded', 'xgb_autoenc_supervised']
 bin_model_names.remove('phylnn_raw')
 cont_model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
                     'linear_eigenvecs', 'linear_umap', 'linear_autoencoded',
                     'xgb_eigenvecs', 'xgb_umap', 'xgb_autoencoded']
 cont_model_names.remove('phylnn_raw')
-rename_models_and_ev_models = {'phylnn_fill_means': 'phylokNN', 'logit_eigenvecs': 'Eigenvec (L)', 'logit_umap': 'UMAP (L)',
-                               'logit_umap_supervised': 'UMAP* (L)', 'logit_autoencoded': 'Autoenc (L)', 'logit_autoenc_supervised': 'Autoenc* (L)',
+rename_models_and_ev_models = {'phylnn_fill_means': 'phylokNN', 'logit_eigenvecs': 'Eigenvec (L)',
+                               'logit_umap': 'UMAP (L)',
+                               'logit_umap_supervised': 'UMAP* (L)', 'logit_autoencoded': 'Autoenc (L)',
+                               'logit_autoenc_supervised': 'Autoenc* (L)',
                                'xgb_eigenvecs': 'Eigenvec (XGB)', 'xgb_umap': 'UMAP (XGB)',
-                               'xgb_umap_supervised': 'UMAP* (XGB)', 'xgb_autoencoded': 'Autoenc (XGB)', 'xgb_autoenc_supervised': 'Autoenc* (XGB)',
+                               'xgb_umap_supervised': 'UMAP* (XGB)', 'xgb_autoencoded': 'Autoenc (XGB)',
+                               'xgb_autoenc_supervised': 'Autoenc* (XGB)',
                                'linear_eigenvecs': 'Eigenvec (L)', 'linear_umap': 'UMAP (L)',
                                'linear_umap_supervised': 'UMAP* (L)', 'linear_autoencoded': 'Autoenc (L)',
                                'linear_autoenc_supervised': 'Autoenc* (L)',
                                }
 
-binary_model_order = ['corHMM', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)', 'UMAP (XGB)', 'UMAP* (XGB)',
+binary_model_order = ['corHMM', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)',
+                      'UMAP (XGB)', 'UMAP* (XGB)',
                       'Autoenc (L)', 'Autoenc* (L)', 'Autoenc (XGB)', 'Autoenc* (XGB)']
 
-continuous_model_order = ['phylopars', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP (XGB)',
+continuous_model_order = ['phylopars', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)',
+                          'UMAP (XGB)',
                           'Autoenc (L)', 'Autoenc (XGB)']
 
 
@@ -40,11 +47,13 @@ def check_scales():
 
     for tag in range(1, number_of_simulation_iterations + 1):
         tag = str(tag)
-        eb_val = pd.read_csv(os.path.join('..', 'data', 'non_standard_simulations', 'EB', 'continuous', tag, 'ground_truth.csv'))[
+        eb_val = pd.read_csv(
+            os.path.join('..', 'data', 'non_standard_simulations', 'EB', 'continuous', tag, 'ground_truth.csv'))[
             'trait_EB_scaled'].tolist()
         EB_values += eb_val
 
-        bmt_val = pd.read_csv(os.path.join('..', 'data', 'non_standard_simulations', 'BMT', 'continuous', tag, 'ground_truth.csv'))[
+        bmt_val = pd.read_csv(
+            os.path.join('..', 'data', 'non_standard_simulations', 'BMT', 'continuous', tag, 'ground_truth.csv'))[
             'trait_BM_trend_scaled'].tolist()
         BMT_values += bmt_val
 
@@ -71,19 +80,21 @@ def output_df(df, bin_or_cont, out_dir, group: str = 'EV Model'):
 
 def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     sns.set_theme()
-
+    # Error bars default is 95% confidence interval
+    err_kws = {"color": ".2", "linewidth": 1.5}
     ## do a useful plot
-    plot_df = bin_df.groupby('EV Model').mean(numeric_only=True)
-    plot_df = plot_df.reset_index()
-    p_df = pd.melt(plot_df, id_vars='EV Model', value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
-    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †', 'real_data': 'MPNS'}).fillna(p_df['EV Model'])
+    ## Turn  Model columns into useful row values
+    p_df = pd.melt(bin_df, id_vars='EV Model', value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
+    p_df['EV Model'] = p_df['EV Model'].map(
+        {'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †', 'real_data': 'MPNS'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
-
     ev_order = ['ARD/SYM/ER', 'BISSE', 'HISSE', 'BMT †', 'MPNS']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
     output_df(p_df, 'binary', out_dir)
 
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order)
+    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=binary_model_order,
+                    capsize=.4,
+                    err_kws=err_kws)
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
@@ -94,7 +105,10 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     plt.close()
 
     # For readability don't plot semisupervised versions here
-    g = sns.barplot(p_df[~p_df['Model'].str.contains('*', regex=False)], x='EV Model', y='Mean Loss', hue='Model')
+    p_df = p_df.sort_values(by="Model", key=lambda column: column.map(lambda e: binary_model_order.index(e)))
+    g = sns.barplot(p_df[~p_df['Model'].str.contains('*', regex=False)], x='EV Model', y='Mean Loss', hue='Model',
+                    order=ev_order, capsize=.4,
+                    err_kws=err_kws, )
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
@@ -105,14 +119,16 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     plt.close()
 
     ## do a useful plot
-    plot_df = cont_df.groupby('EV Model').mean(numeric_only=True)
-    plot_df = plot_df.reset_index()
-    p_df = pd.melt(plot_df, id_vars='EV Model', value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
-    p_df['EV Model'] = p_df['EV Model'].map({'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †', 'real_data': 'BIEN'}).fillna(p_df['EV Model'])
+    p_df = pd.melt(cont_df, id_vars='EV Model', value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
+    p_df['EV Model'] = p_df['EV Model'].map(
+        {'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †', 'real_data': 'BIEN'}).fillna(p_df['EV Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
     ev_order = ['BM/OU', 'BMT', 'EB', 'BMT †', 'BIEN']
     p_df = p_df.sort_values(by="EV Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=continuous_model_order)
+    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue='EV Model', order=continuous_model_order,
+                    capsize=.4,
+                    err_kws=err_kws,
+                    )
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
@@ -124,7 +140,11 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
     plt.close()
     output_df(p_df, 'continuous', out_dir)
 
-    g = sns.barplot(p_df, x='EV Model', y='Mean Loss', hue='Model')
+    p_df = p_df.sort_values(by="Model", key=lambda column: column.map(lambda e: continuous_model_order.index(e)))
+    g = sns.barplot(p_df, x='EV Model', y='Mean Loss', hue='Model', order=ev_order,
+                    capsize=.4,
+                    err_kws=err_kws,
+                    )
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
     sns.move_legend(
         g, "lower center",
@@ -136,8 +156,10 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, out_dir):
 
 
 def main():
-    bin_df = pd.read_csv(os.path.join('outputs', 'binary', 'results.csv'))[bin_model_names + ['EV Model', 'Missing Type']]
-    cont_df = pd.read_csv(os.path.join('outputs', 'continuous', 'results.csv'))[cont_model_names + ['EV Model', 'Missing Type']]
+    bin_df = pd.read_csv(os.path.join('outputs', 'binary', 'results.csv'))[
+        bin_model_names + ['EV Model', 'Missing Type']]
+    cont_df = pd.read_csv(os.path.join('outputs', 'continuous', 'results.csv'))[
+        cont_model_names + ['EV Model', 'Missing Type']]
 
     plot_binary_and_continuous_cases(bin_df, cont_df, 'outputs')
 

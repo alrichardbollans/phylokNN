@@ -35,7 +35,6 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
         :return: The created autoencoder model.
         """
         ##
-        # Add a Dense layer with a L1 activity regularizer to constrain the representations to be compact
         autoencoder = keras.Sequential([
             keras.Input(shape=(_input_dim,)),
             keras.layers.Dense(encoded_dim * 2, activation='leaky_relu'),
