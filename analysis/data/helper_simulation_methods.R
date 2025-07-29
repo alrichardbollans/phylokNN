@@ -1,5 +1,7 @@
 library(TDIP)
 missingRate <- 0.1
+number_of_repetitions = 100
+number_of_taxa = 100
 output_simulation <- function(this_sim_path, simData, tree, ev_model){
   param_df = simData$Dataframe
   extinct_tips = getExtinct(tree, tol=1e-8)
