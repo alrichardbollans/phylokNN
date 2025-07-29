@@ -1,7 +1,6 @@
 library(TDIP)
-source('add_eigenvectors.R')
-
-output_simulation <- function(base_output_path, simData, tree, tag,id){
+missingRate <- 0.1
+output_simulation <- function(this_sim_path, simData, tree, ev_model){
   param_df = simData$Dataframe
   extinct_tips = getExtinct(tree, tol=1e-8)
   #PhyloNa
@@ -58,33 +57,29 @@ output_simulation <- function(base_output_path, simData, tree, tag,id){
   #                               ds = simData$FinalData, cols_mis = 1:ncol(simData$FinalData))
   
   ## Save data
-  this_sim_path = file.path(base_output_path, tag, id)
-  dir.create(this_sim_path, recursive=TRUE)
+  outpath = file.path(this_sim_path, ev_model)
+  dir.create(outpath, recursive=TRUE)
   
-  tree_distances = ape::cophenetic.phylo(tree)
-  write.csv(tree_distances, file = file.path(this_sim_path, 'tree_distances.csv'))
+
   
-  saveRDS(simData, file=file.path(this_sim_path, 'simData.rds'))
+  saveRDS(simData, file=file.path(outpath, 'simData.rds'))
   
   ground_truth = update_trait_columns(simData$FinalData)
-  write.csv(ground_truth, file.path(this_sim_path, 'ground_truth.csv'),row.names = FALSE)
+  write.csv(ground_truth, file.path(outpath, 'ground_truth.csv'),row.names = FALSE)
   ## Write missing values
-  write.csv(update_trait_columns(mcar_values), file.path(this_sim_path, 'mcar_values.csv'),row.names = FALSE)
-  saveRDS(mcar_values, file=file.path(this_sim_path, 'mcar_values.rds'))
+  write.csv(update_trait_columns(mcar_values), file.path(outpath, 'mcar_values.csv'),row.names = FALSE)
+  saveRDS(mcar_values, file=file.path(outpath, 'mcar_values.rds'))
   
-  # write.csv(update_trait_columns(mnar_values), file.path(this_sim_path, 'mnar_values.csv'),row.names = FALSE)
-  # saveRDS(mnar_values, file=file.path(this_sim_path, 'mnar_values.rds'))
+  # write.csv(update_trait_columns(mnar_values), file.path(outpath, 'mnar_values.csv'),row.names = FALSE)
+  # saveRDS(mnar_values, file=file.path(outpath, 'mnar_values.rds'))
   
-  # write.csv(update_trait_columns(mar_values), file.path(this_sim_path, 'mar_values.csv'),row.names = FALSE)
-  # saveRDS(mar_values, file=file.path(this_sim_path, 'mar_values.rds'))
+  # write.csv(update_trait_columns(mar_values), file.path(outpath, 'mar_values.csv'),row.names = FALSE)
+  # saveRDS(mar_values, file=file.path(outpath, 'mar_values.rds'))
   
-  write.csv(update_trait_columns(phyloNa_values), file.path(this_sim_path, 'phyloNa_values.csv'),row.names = FALSE)
-  saveRDS(phyloNa_values, file=file.path(this_sim_path, 'phyloNa_values.rds'))
+  write.csv(update_trait_columns(phyloNa_values), file.path(outpath, 'phyloNa_values.csv'),row.names = FALSE)
+  saveRDS(phyloNa_values, file=file.path(outpath, 'phyloNa_values.rds'))
   
-  write.csv(param_df, file.path(this_sim_path, 'dataframe_params.csv'))
-  
-  ape::write.tree(tree, file.path(this_sim_path, 'tree.tre'))
-  decompose_tree(this_sim_path)
+  write.csv(param_df, file.path(outpath, 'dataframe_params.csv'))
 }
 
 

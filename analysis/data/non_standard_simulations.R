@@ -53,65 +53,60 @@ get_EB_sample <- function(){
   return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
 }
 
-get_bisse_sample <- function(){
-  # BiSSE (Binary-State Speciation and Extinction)
-  # 
-  # The BiSSE model (in {diversitree}) links a binary trait (0 or 1) to different birth/death rates.
+get_bhisse_sample <- function(hidden.traits,include.extinct, number_of_extant_taxa){
   
-  # Define birth/death rates depending on trait state
-  
-  # Define parameters: λ (speciation), μ (extinction), q01/q10 (transition rates)
-  pars = runif(6, min=0.00001, max=0.99999)
-  
-  # Simulate a tree and associated binary trait
-  # https://lukejharmon.github.io/ilhabela/2015/07/05/BiSSE-and-HiSSE/
-  sim_bisse <- diversitree::tree.bisse(pars, max.taxa=param_tree[3], x0=0)
-  
-  # Extract the tree and traits
-  tree <- sim_bisse
-  traits <- sim_bisse$tip.state
-  
-  if (!is.null(tree) && class(tree) == "phylo") {
-    param_dataframe = data.frame(pars=c(pars))
-    ground_truth = data.frame(traits)
-    return(list(tree=tree, FinalData= ground_truth, Dataframe=param_dataframe))
-  } else {
-    get_bisse_sample()
+  if(hidden.traits==1){
+    # Heterogeneous Transition Rate Models
+    # https://revbayes.github.io/tutorials/sse/hisse
+    # a HiSSE model with 1 hidden binary trait (2 hidden states) and 1 observed binary trait (2 observed states), totaling 4 states. 
+    # This allows for interactions between hidden and observed traits in diversification rates.
+    # For 4 states (e.g., 0A, 0B, 1A, 1B), define:
+    death_rates = runif(4, min = 0, max = 1)
+    birth_rates = runif(4, min = 0, max = 1)
+    
   }
-}
-
-get_hisse_sample <- function(){
-  # Heterogeneous Transition Rate Models
-  # 
-  # a HiSSE model with 1 hidden binary trait (2 hidden states) and 1 observed binary trait (2 observed states), totaling 4 states. 
-  # This allows for interactions between hidden and observed traits in diversification rates.
-  # For 4 states (e.g., 0A, 0B, 1A, 1B), define:
-  turnover.rates <- runif(4, min = 0, max = 1)  # λ + μ for each of 4 states
-  eps.values <- runif(4, min = 0, max = 1)      # μ/λ ratios for each state
-  transition.rates <- matrix(runif(16, min = 0, max = 1), nrow = 4)  # 12 transitions (4x4 - 4 diagonals)
-  diag(transition.rates) <- NA
+  if(hidden.traits==0){
+    # BiSSE (Binary-State Speciation and Extinction)
+    # https://revbayes.github.io/tutorials/sse/bisse-intro.html#bisse_theory
+    # The BiSSE model (in {diversitree}) links a binary trait (0 or 1) to different birth/death rates.
+    
+    # Define birth/death rates depending on trait state
+    death_rates = runif(2, min = 0, max = 1)
+    birth_rates = runif(2, min = 0, max = 1)
+  }
   
+  turnover.rates <- death_rates+birth_rates  # λ + μ for each of 4 states
+  eps.values <- death_rates/birth_rates     # μ/λ ratios for each state
+  
+  # Get indices for transition rates. Allow transition among hidden categories to vary.
+  transition.rates <- TransMatMakerHiSSE(hidden.traits =hidden.traits, cat.trans.vary = TRUE)
+  for(i in 1:6){
+    transition.rates[transition.rates==i]<-runif(1, min = 0, max = 1)
+  }
   simulated.result <- hisse::SimulateHisse(turnover.rates, eps.values, 
-                                           transition.rates, max.taxa=param_tree[[3]], x0=0)
-  hisse_tree = hisse::SimToPhylo(simulated.result, include.extinct=FALSE, drop.stem=TRUE)
-
+                                           transition.rates, max.taxa=number_of_extant_taxa, x0=0)
+  hisse_tree = hisse::SimToPhylo(simulated.result, include.extinct=include.extinct, drop.stem=TRUE)
+  # plot(hisse_tree)
   
   # # Define colors for binary states
   # trait_colors <- ifelse(traits == 1, "red", "blue")
   # 
   # # Plot tree with colored tip labels
   # plot(hisse_tree, tip.color = trait_colors, cex = 1.2)
-  
-  if (!is.null(hisse_tree) && class(hisse_tree) == "phylo") {
-    # Convert states back into observed binary character
-    # Extract tip states (0, 1, 2, 3)
-    tip_states <- hisse_tree$tip.state
-    
-    # Map to observed binary trait (0 or 1)
-    observed_traits <- tip_states %% 2  # 0,2 → 0, 1,3 → 1
-    
-    # Overwrite tip names (careful!)
-    hisse_tree$tip.state <- observed_traits
+
+  if (!is.null(hisse_tree) && class(hisse_tree) == "phylo" && length(getExtant(hisse_tree))==number_of_extant_taxa) {
+
+    if(hidden.traits==1){
+      # Convert states back into observed binary character
+      # Extract tip states (0, 1, 2, 3)
+      tip_states <- hisse_tree$tip.state
+      
+      # Map to observed binary trait (0 or 1)
+      observed_traits <- tip_states %% 2  # 0,2 → 0, 1,3 → 1
+      
+      # Overwrite tip names (careful!)
+      hisse_tree$tip.state <- observed_traits
+    }
     
     traits = hisse_tree$tip.state
     traits = traits[match(hisse_tree$tip.label, names(traits))]
@@ -119,7 +114,7 @@ get_hisse_sample <- function(){
     param_dataframe = data.frame(turnover.rates=c(turnover.rates),eps.values=c(eps.values), transition.rates=c(transition.rates))
     return(list(tree=hisse_tree, FinalData= ground_truth, Dataframe=param_dataframe))
   } else {
-    get_hisse_sample()
+    get_bhisse_sample(hidden.traits, include.extinct, number_of_extant_taxa)
   }
   
   
@@ -134,11 +129,13 @@ for(i in 1:number_of_repetitions){
   ape::is.ultrametric(EB_sample$tree)
   output_simulation(file.path('non_standard_simulations','EB'),EB_sample, EB_sample$tree,'continuous', i)
 
-  # bisse_sample = get_bisse_sample()
+  bisse_sample = get_bhisse_sample(0, FALSE)
+  exbisse_sample = get_bhisse_sample(0, TRUE)
   # ape::is.ultrametric(bisse_sample$tree)
   # output_simulation(file.path('non_standard_simulations','BISSE'),bisse_sample, bisse_sample$tree,'binary', i)
   # 
-  # hisse_sample = get_hisse_sample()
+  hisse_sample = get_bhisse_sample(1, FALSE)
+  exhisse_sample = get_bhisse_sample(1, TRUE)
   # ape::is.ultrametric(hisse_sample$tree)
   # output_simulation(file.path('non_standard_simulations','HISSE'),hisse_sample, hisse_sample$tree,'binary', i)
 }
