@@ -9,9 +9,8 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from xgboost import XGBClassifier, XGBRegressor
 
-from analysis.data.encoding_evaluation_methods import tsne_plot
-from analysis.data.umapping import reduction_factor
-from analysis.imputation.helper_functions import number_of_simulation_iterations, missingness_types, get_input_data_paths, \
+from analysis.data.helper_functions import number_of_simulation_iterations
+from analysis.imputation.helper_functions import missingness_types, get_input_data_paths, \
     get_prediction_data_paths, n_split_for_nested_cv
 from phyloAutoEncoder import autoencode_pairwise_distances
 
@@ -83,9 +82,9 @@ def fit_and_output(clf_instance, grid_search_param_grid, out_dir, model_name, fu
     out_df.to_csv(os.path.join(out_dir, f'{model_name}.csv'))
 
 
-def add_y_to_data(X, real_or_sim, bin_or_cont, iteration, missingness):
-    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
-    y = pd.read_csv(os.path.join(data_path, f'{missingness}_values.csv'), index_col=0)
+def add_y_to_data(X, case, ev_model, iteration, missingness):
+    treepath, value_path = get_input_data_paths(case, ev_model, iteration)
+    y = pd.read_csv(os.path.join(value_path, f'{missingness}_values.csv'), index_col=0)
 
     target_name = y.columns.to_list()[0]
 
@@ -97,10 +96,10 @@ def add_y_to_data(X, real_or_sim, bin_or_cont, iteration, missingness):
     return df, encoding_vars, target_name
 
 
-def get_umap_data(real_or_sim, bin_or_cont, iteration):
-    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
+def get_umap_data(case, ev_model, iteration):
+    treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
-    X = pd.read_csv(os.path.join(data_path, 'umap_unsupervised_embedding.csv'), index_col=0)
+    X = pd.read_csv(os.path.join(treepath, 'umap_unsupervised_embedding.csv'), index_col=0)
     ## Scale the data
     X = pd.DataFrame(StandardScaler().fit_transform(X), index=X.index)
 
@@ -108,11 +107,11 @@ def get_umap_data(real_or_sim, bin_or_cont, iteration):
 
 
 def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingness):
-    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
+    treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
     distances = pd.read_csv(os.path.join(data_path, 'tree_distances.csv'), index_col=0)
 
-    full_df, encoding_vars, target_name = add_y_to_data(distances, real_or_sim, bin_or_cont, iteration, missingness)
+    full_df, encoding_vars, target_name = add_y_to_data(distances, case, ev_model, iteration, missingness)
 
     scaled_penguin_data = StandardScaler().fit_transform(full_df[encoding_vars])
     fitter = umap.UMAP(n_components=int(len(distances.columns) * reduction_factor))
@@ -131,7 +130,7 @@ def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingne
 
 
 def get_autoencoded_data(real_or_sim, bin_or_cont, iteration):
-    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
+    treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
     X = pd.read_csv(os.path.join(data_path, 'unsupervised_autoencoded_phylogeny.csv'), index_col=0)
     ## Scale the data
@@ -153,11 +152,11 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
     It may not be the best way to use supervised autoencoders but it may improve on the unsupervised case.
 
     '''
-    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
+    treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
     distances = pd.read_csv(os.path.join(data_path, 'tree_distances.csv'), index_col=0)
 
-    full_df, distance_vars, target_name = add_y_to_data(distances, real_or_sim, bin_or_cont, iteration, missingness)
+    full_df, distance_vars, target_name = add_y_to_data(distances, case, ev_model, iteration, missingness)
 
     majority_class = full_df[target_name].mode()[0]
     train_data = full_df[full_df[target_name] == majority_class][distance_vars]
@@ -176,7 +175,7 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
 
 
 def get_eigenvectors(real_or_sim, bin_or_cont, iteration):
-    data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
+    treepath, value_path = get_input_data_paths(case, ev_model, iteration)
     X = pd.read_csv(os.path.join(data_path, 'all_eigenvectors.csv'), index_col=0)
 
     broken_stick_params = pd.read_csv(os.path.join(data_path, 'broken_stick_parameters.csv'), index_col=0)
@@ -201,13 +200,13 @@ def run_predictions():
                 for real_or_sim in sim_list:
 
                     umap_X = get_umap_data(real_or_sim, bin_or_cont, iteration)
-                    umap_df, umap_encoding_vars, umap_target_name = add_y_to_data(umap_X, real_or_sim, bin_or_cont, iteration, m)
+                    umap_df, umap_encoding_vars, umap_target_name = add_y_to_data(umap_X, case, ev_model, iteration, m)
 
                     eigen_X = get_eigenvectors(real_or_sim, bin_or_cont, iteration)
-                    eigen_df, eigen_encoding_vars, eigen_target_name = add_y_to_data(eigen_X, real_or_sim, bin_or_cont, iteration, m)
+                    eigen_df, eigen_encoding_vars, eigen_target_name = add_y_to_data(eigen_X, case, ev_model, iteration, m)
 
                     autoenc_X = get_autoencoded_data(real_or_sim, bin_or_cont, iteration)
-                    autoenc_df, autoenc_encoding_vars, autoenc_target_name = add_y_to_data(autoenc_X, real_or_sim, bin_or_cont, iteration, m)
+                    autoenc_df, autoenc_encoding_vars, autoenc_target_name = add_y_to_data(autoenc_X, case, ev_model, iteration, m)
                     out_dir = get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, m)
 
                     if bin_or_cont == 'binary':

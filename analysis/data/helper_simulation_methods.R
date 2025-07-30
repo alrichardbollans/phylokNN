@@ -2,9 +2,22 @@ library(TDIP)
 missingRate <- 0.1
 number_of_repetitions = 100
 number_of_taxa = 100
-output_simulation <- function(this_sim_path, simData, tree, ev_model){
+source('add_eigenvectors.R')
+output_tree <- function(dir_path, out_tree, out_birth='NULL', out_death='NULL'){
+  dir.create(dir_path, recursive=TRUE)
+  tree_distances = ape::cophenetic.phylo(out_tree)
+  write.csv(tree_distances, file = file.path(dir_path, 'tree_distances.csv'))
+  
+  ape::write.tree(out_tree, file.path(dir_path, 'tree.tre'))
+  decompose_tree(dir_path)
+  
+  write.csv(data.frame(birth_rate=c(out_birth),death_rate=c(out_death), ultrametric = c(ape::is.ultrametric(out_tree)), 
+                       number_of_tips=c(length(out_tree$tip.label))),file = file.path(dir_path, 'tree_params.csv'))
+}
+output_simulation <- function(this_sim_path, simData, ev_model){
   param_df = simData$Dataframe
-  extinct_tips = getExtinct(tree, tol=1e-8)
+  tree = simData$tree
+  extinct_tips = phytools::getExtinct(tree, tol=1e-8)
   #PhyloNa
   # the case in which species belonging to particular clades are more 
   # likely to be missing trait data
@@ -61,9 +74,7 @@ output_simulation <- function(this_sim_path, simData, tree, ev_model){
   ## Save data
   outpath = file.path(this_sim_path, ev_model)
   dir.create(outpath, recursive=TRUE)
-  
 
-  
   saveRDS(simData, file=file.path(outpath, 'simData.rds'))
   
   ground_truth = update_trait_columns(simData$FinalData)
@@ -71,12 +82,6 @@ output_simulation <- function(this_sim_path, simData, tree, ev_model){
   ## Write missing values
   write.csv(update_trait_columns(mcar_values), file.path(outpath, 'mcar_values.csv'),row.names = FALSE)
   saveRDS(mcar_values, file=file.path(outpath, 'mcar_values.rds'))
-  
-  # write.csv(update_trait_columns(mnar_values), file.path(outpath, 'mnar_values.csv'),row.names = FALSE)
-  # saveRDS(mnar_values, file=file.path(outpath, 'mnar_values.rds'))
-  
-  # write.csv(update_trait_columns(mar_values), file.path(outpath, 'mar_values.csv'),row.names = FALSE)
-  # saveRDS(mar_values, file=file.path(outpath, 'mar_values.rds'))
   
   write.csv(update_trait_columns(phyloNa_values), file.path(outpath, 'phyloNa_values.csv'),row.names = FALSE)
   saveRDS(phyloNa_values, file=file.path(outpath, 'phyloNa_values.rds'))

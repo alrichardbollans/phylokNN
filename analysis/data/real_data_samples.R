@@ -6,11 +6,11 @@ source('helper_simulation_methods.R')
 repo_path = Sys.getenv('KEWSCRATCHPATH')
 species_tree = ape::read.tree(file.path(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs',
                                     'Species', 'Uphylomaker_species_tree.tre'))
-binary_data = read.csv(file.path('real_data', 'binary', 'binary_gentianales.csv'))
+binary_data = read.csv(file.path('real_data', 'ultrametric','MPNS', 'binary_gentianales.csv'))
 binary_data['accepted_species'] <- lapply(binary_data['accepted_species'], replace_space_with_underscore_in_name)
 
 binary_cases <- function(){
-  sample_tips = sample(species_tree$tip.label,param_tree[[3]])
+  sample_tips = sample(species_tree$tip.label,number_of_taxa)
   sample_tree = subset_tree(species_tree,sample_tips)
   ground_truth = binary_data[binary_data$accepted_species %in% sample_tips,]
   rownames(ground_truth) <- ground_truth$accepted_species
@@ -21,7 +21,9 @@ binary_cases <- function(){
 for(i in 1:number_of_repetitions){
   binary_sample = binary_cases()
   ape::is.ultrametric(binary_sample$tree)
-  output_simulation(file.path('real_data'),binary_sample, binary_sample$tree,'binary', i)
+  sim_path = file.path("real_data",'ultrametric', 'MPNS', i)
+  output_tree(sim_path, binary_sample$tree)
+  output_simulation(sim_path,binary_sample, 'MPNS')
 }
 
 # From rBIEN package
@@ -52,7 +54,7 @@ clean_df['accepted_species'] <- lapply(clean_df['accepted_species'], replace_spa
 continuous_tree  = subset_tree(species_tree,clean_df$accepted_species)
 
 continuous_cases <- function(){
-  sample_tips = sample(continuous_tree$tip.label,param_tree[[3]])
+  sample_tips = sample(continuous_tree$tip.label,number_of_taxa)
   sample_tree = subset_tree(continuous_tree,sample_tips)
   ground_truth = clean_df[clean_df$accepted_species %in% sample_tips,]
   rownames(ground_truth) <- ground_truth$accepted_species
@@ -63,5 +65,7 @@ continuous_cases <- function(){
 for(i in 1:number_of_repetitions){
   cont_sample = continuous_cases()
   ape::is.ultrametric(cont_sample$tree)
-  output_simulation(file.path('real_data'),cont_sample, cont_sample$tree,'continuous', i)
+  sim_path = file.path("real_data",'ultrametric', 'BIEN', i)
+  output_tree(sim_path, cont_sample$tree)
+  output_simulation(sim_path,cont_sample, 'BIEN')
 }

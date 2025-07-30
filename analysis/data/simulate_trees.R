@@ -1,21 +1,11 @@
 source('add_eigenvectors.R')
 source('helper_simulation_methods.R')
 
-output_tree <- function(dir_path, out_tree, out_birth='NULL', out_death='NULL'){
-  dir.create(dir_path, recursive=TRUE)
-  tree_distances = ape::cophenetic.phylo(out_tree)
-  write.csv(tree_distances, file = file.path(dir_path, 'tree_distances.csv'))
-  
-  ape::write.tree(out_tree, file.path(dir_path, 'tree.tre'))
-  decompose_tree(dir_path)
-  
-  write.csv(data.frame(birth_rate=c(out_birth),death_rate=c(out_death), ultrametric = c(ape::is.ultrametric(out_tree)), 
-                       number_of_tips=c(length(out_tree$tip.label))),file = file.path(dir_path, 'tree_params.csv'))
-}
+
 get_tree <- function(include.extinct, birth,death,number_of_extant_taxa){
 
   SimTree <- phytools::pbtree(b = birth, d = death, n = number_of_extant_taxa, extant.only = !include.extinct)
-  if (!is.null(SimTree) && class(SimTree) == "phylo" && length(getExtant(SimTree))==number_of_extant_taxa && 
+  if (!is.null(SimTree) && class(SimTree) == "phylo" && length(phytools::getExtant(SimTree))==number_of_extant_taxa && 
       length(SimTree$tip.label)<500) {
     
     return(list("tree" = SimTree, "birth" = birth))
@@ -52,7 +42,7 @@ get_bhisse_sample <- function(hidden.traits,include.extinct, number_of_extant_ta
   eps.values <- death_rates/birth_rates     # μ/λ ratios for each state
   
   # Get indices for transition rates. Allow transition among hidden categories to vary.
-  transition.rates <- TransMatMakerHiSSE(hidden.traits =hidden.traits, cat.trans.vary = TRUE)
+  transition.rates <- hisse::TransMatMakerHiSSE(hidden.traits =hidden.traits, cat.trans.vary = TRUE)
   for(i in 1:6){
     transition.rates[transition.rates==i]<-runif(1, min = 0, max = 1)
   }
@@ -67,7 +57,7 @@ get_bhisse_sample <- function(hidden.traits,include.extinct, number_of_extant_ta
   # # Plot tree with colored tip labels
   # plot(hisse_tree, tip.color = trait_colors, cex = 1.2)
   
-  if (!is.null(hisse_tree) && class(hisse_tree) == "phylo" && length(getExtant(hisse_tree))==number_of_extant_taxa
+  if (!is.null(hisse_tree) && class(hisse_tree) == "phylo" && length(phytools::getExtant(hisse_tree))==number_of_extant_taxa
       && length(hisse_tree$tip.label)<5*number_of_extant_taxa) {
     
     if(hidden.traits==1){
@@ -101,7 +91,7 @@ for(i in 1:number_of_repetitions){
   print(i)
   for(case in c('ultrametric', 'with_extinct')){
     
-    this_sim_path = file.path("trees", case, 'standard', i)
+    this_sim_path = file.path("simulations", case, 'standard', i)
     death_rate = runif(1, min = 0, max = 1)
     birth_rate = runif(1, min = 0, max = 1)
 
@@ -121,24 +111,24 @@ for(i in 1:number_of_repetitions){
   }
   
   ultra_bisse_sample = get_bhisse_sample(0,FALSE,number_of_taxa)
-  sim_path= file.path("trees", 'ultrametric', 'BiSSE', i)
+  sim_path= file.path("simulations", 'ultrametric', 'BiSSE', i)
   output_tree(sim_path, ultra_bisse_sample$tree)
-  output_simulation(sim_path, ultra_bisse_sample, ultra_bisse_sample$tree,  'BiSSE')
+  output_simulation(sim_path, ultra_bisse_sample,  'BiSSE')
   
   ultra_hisse_sample = get_bhisse_sample(1,FALSE,number_of_taxa)
-  sim_path= file.path("trees", 'ultrametric', 'HiSSE', i)
+  sim_path= file.path("simulations", 'ultrametric', 'HiSSE', i)
   output_tree(sim_path, ultra_hisse_sample$tree)
-  output_simulation(sim_path, ultra_hisse_sample, ultra_hisse_sample$tree, 'HiSSE')
+  output_simulation(sim_path, ultra_hisse_sample, 'HiSSE')
   
   extinct_bisse_sample = get_bhisse_sample(0,TRUE,number_of_taxa)
-  sim_path= file.path("trees", 'with_extinct', 'BiSSE', i)
+  sim_path= file.path("simulations", 'with_extinct', 'BiSSE', i)
   output_tree(sim_path, extinct_bisse_sample$tree)
-  output_simulation(sim_path, extinct_bisse_sample, extinct_bisse_sample$tree, 'BiSSE')
+  output_simulation(sim_path, extinct_bisse_sample, 'BiSSE')
   
   extinct_hisse_sample = get_bhisse_sample(1,TRUE,number_of_taxa)
-  sim_path= file.path("trees", 'with_extinct', 'HiSSE', i)
+  sim_path= file.path("simulations", 'with_extinct', 'HiSSE', i)
   output_tree(sim_path, extinct_hisse_sample$tree)
-  output_simulation(sim_path, extinct_hisse_sample, extinct_hisse_sample$tree, 'HiSSE')
+  output_simulation(sim_path, extinct_hisse_sample, 'HiSSE')
 
   
   

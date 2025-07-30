@@ -1,6 +1,7 @@
 from tqdm import tqdm
 
-from analysis.imputation.helper_functions import phylnn_predict, number_of_simulation_iterations, missingness_types
+from analysis.data.helper_functions import number_of_simulation_iterations
+from analysis.imputation.helper_functions import phylnn_predict, missingness_types
 
 
 def main():

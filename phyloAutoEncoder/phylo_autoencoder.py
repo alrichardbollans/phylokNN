@@ -4,6 +4,7 @@ import keras
 import pandas as pd
 import visualkeras
 from keras import callbacks
+from keras.src.layers import PReLU
 from matplotlib import pyplot as plt
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
@@ -37,12 +38,12 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
         ##
         autoencoder = keras.Sequential([
             keras.Input(shape=(_input_dim,)),
-            keras.layers.Dense(encoded_dim * 2, activation='leaky_relu'),
+            keras.layers.Dense(encoded_dim * 2, activation=PReLU()),
 
-            keras.layers.Dense(encoded_dim, activation='leaky_relu', name='encoder'),
-            keras.layers.Dense(encoded_dim * 2, activation='leaky_relu'),
-            keras.layers.Dense(_input_dim, activation='leaky_relu', name='decoder'),
-            # relu for final activation as output is in the range [0,∞), but use leaky_relu as was experiencing dead neurons in the output
+            keras.layers.Dense(encoded_dim, activation=PReLU(), name='encoder'),
+            keras.layers.Dense(encoded_dim * 2, activation=PReLU()),
+            keras.layers.Dense(_input_dim, activation=PReLU(), name='decoder'),
+            # relu for final activation as output is in the range [0,∞), but use PReLU() as was experiencing dead neurons in the output
 
         ])
 
@@ -68,8 +69,8 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
 
         from PIL import ImageFont
         font = ImageFont.load_default()
-        visualkeras.layered_view(autoencoder, legend=True, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_visual.png'),font=font)
-        visualkeras.graph_view(autoencoder,ellipsize_after=50, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_graph.png'),)
+        # visualkeras.layered_view(autoencoder, legend=True, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_visual.png'),font=font)
+        # visualkeras.graph_view(autoencoder,ellipsize_after=50, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_graph.png'),)
 
     X_train, X_val = train_test_split(scaled_distance_data, test_size=0.2)
 
@@ -107,6 +108,8 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
             plt.ylabel('Loss')
             plt.legend()
             plt.savefig(os.path.join(_output_dir, 'phylogeny_autoencoder_training_loss.png'))
+            plt.close()
+            plt.clf()
 
             ## Display of the encoder
             keras.utils.plot_model(encoder_model, to_file=os.path.join(_output_dir, 'phylogeny_encoder.png'), show_shapes=True,

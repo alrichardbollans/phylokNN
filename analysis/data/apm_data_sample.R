@@ -3,7 +3,7 @@
 library(phytools)
 library(ape)
 
-source('helpful_phyl_methods.R')
+#source('helpful_phyl_methods.R')
 source('helper_simulation_methods.R')
 source('add_eigenvectors.R')
 repo_path = Sys.getenv('KEWSCRATCHPATH')
