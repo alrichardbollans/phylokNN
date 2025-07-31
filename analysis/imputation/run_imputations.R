@@ -6,58 +6,45 @@ cl <- makeCluster(num_cores)
 registerDoParallel(cl)
 
 number_of_simulation_iterations = 100
-foreach(iter = 1:number_of_simulation_iterations) %dopar% {
-# for(iter in 1:number_of_simulation_iterations){
+# foreach(iter = 1:number_of_simulation_iterations) %dopar% {
+for(iter in 1:number_of_simulation_iterations){
   repo_path = Sys.getenv('KEWSCRATCHPATH')
   source(file.path(repo_path, 'phyloKNN', 'analysis', 'imputation','R_continuous_imputation_helper_functions.R'))
   
   missingness_types = c('mcar', 'phyloNa')
-  
+  cases = c('ultrametric', 'with_extinct')
+  binary_ev_models = c('ER', 'ARD', 'BiSSE', 'HiSSE', 'BMT*', 'MPNS')
+  continuous_ev_models = c('BM', 'OU', 'EB', 'LB', 'BMT', 'BIEN')
   print(iter)
-  for (missing_type in missingness_types) {  # Keep the inner loop sequential
-    
-    # Binary cases
-    
-    run_picante_models('simulations', 'binary', iter, missing_type)
-    run_corHMM_models('simulations', 'binary', iter, missing_type)
-    
-    run_picante_models('real_data', 'binary', iter, missing_type)
-    run_corHMM_models('real_data', 'binary', iter, missing_type)
-    
-    run_picante_models('BISSE', 'binary', iter, missing_type)
-    run_picante_models('HISSE', 'binary', iter, missing_type)
-    run_corHMM_models('BISSE', 'binary', iter, missing_type)
-    run_corHMM_models('HISSE', 'binary', iter, missing_type)
+  for (missing_type in missingness_types) {
+    for(ev_model in binary_ev_models){# Keep the inner loop sequential
+        if(ev_model == 'MPNS'){
+            run_picante_models('ultrametric', ev_model, iter, missing_type, 'binary')
+            run_corHMM_models('ultrametric', ev_model, iter, missing_type, 'binary')
+        }
+        else{
+            for(case in cases){
+                run_picante_models(case, ev_model, iter, missing_type, 'binary')
+                run_corHMM_models(case, ev_model, iter, missing_type, 'binary')
+             }
 
-    run_picante_models('Extinct_BMT', 'binary', iter, missing_type)
-    run_corHMM_models('Extinct_BMT', 'binary', iter, missing_type)
-    
-    
-    # Continuous cases
-    run_phylopars_models('simulations', 'continuous', iter, missing_type)
-    run_picante_models('simulations', 'continuous', iter, missing_type)
-    
-    run_phylopars_models('real_data', 'continuous', iter, missing_type)
-    run_picante_models('real_data', 'continuous', iter, missing_type)
+        }
+    }
 
-    run_phylopars_models('BMT', 'continuous', iter, missing_type)
-    run_phylopars_models('EB', 'continuous', iter, missing_type)
-    run_picante_models('BMT', 'continuous', iter, missing_type)
-    run_picante_models('EB', 'continuous', iter, missing_type)
+     for(ev_model in continuous_ev_models){# Keep the inner loop sequential
+        if(ev_model == 'BIEN'){
+            run_phylopars_models('ultrametric', ev_model, iter, missing_type, 'continuous')
+            run_picante_models('ultrametric', ev_model, iter, missing_type, 'continuous')
+        }
+        else{
+            for(case in cases){
+                run_phylopars_models(case, ev_model, iter, missing_type, 'continuous')
+                run_picante_models(case, ev_model, iter, missing_type, 'continuous')
+             }
 
-    run_phylopars_models('Extinct_BMT', 'continuous', iter, missing_type)
-    run_picante_models('Extinct_BMT', 'continuous', iter, missing_type)
+        }
+
+    }
     
   }
 }
-
-
-
-
-# # With real data takes far too long
-# run_picante_models('real_data', 'binary', 1, 'mcar')
-# # run_corHMM_models('real_data', 'binary', 1, 'mcar')
-# # run_phylopars_models('real_data', 'continuous', 1, 'mcar')
-# # run_picante_models('real_data', 'continuous', 1, 'mcar')
-# print('Not implemented')
-#  

@@ -9,9 +9,9 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from xgboost import XGBClassifier, XGBRegressor
 
-from analysis.data.helper_functions import number_of_simulation_iterations
+from analysis.data.helper_functions import number_of_simulation_iterations, reduction_factor, simulation_types
 from analysis.imputation.helper_functions import missingness_types, get_input_data_paths, \
-    get_prediction_data_paths, n_split_for_nested_cv
+    get_prediction_data_paths, n_split_for_nested_cv, get_bin_or_cont_from_ev_model
 from phyloAutoEncoder import autoencode_pairwise_distances
 
 xgb_clf_init_kwargs = {'eval_metric': brier_score_loss}
@@ -106,10 +106,10 @@ def get_umap_data(case, ev_model, iteration):
     return X
 
 
-def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingness):
+def get_semi_supervised_umap_data(case, ev_model, iteration, missingness):
     treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
-    distances = pd.read_csv(os.path.join(data_path, 'tree_distances.csv'), index_col=0)
+    distances = pd.read_csv(os.path.join(treepath, 'tree_distances.csv'), index_col=0)
 
     full_df, encoding_vars, target_name = add_y_to_data(distances, case, ev_model, iteration, missingness)
 
@@ -129,17 +129,17 @@ def get_semi_supervised_umap_data(real_or_sim, bin_or_cont, iteration, missingne
     return out_df, encoding_vars, target_name
 
 
-def get_autoencoded_data(real_or_sim, bin_or_cont, iteration):
+def get_autoencoded_data(case, ev_model, iteration):
     treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
-    X = pd.read_csv(os.path.join(data_path, 'unsupervised_autoencoded_phylogeny.csv'), index_col=0)
+    X = pd.read_csv(os.path.join(treepath, 'unsupervised_autoencoded_phylogeny.csv'), index_col=0)
     ## Scale the data
     X = pd.DataFrame(StandardScaler().fit_transform(X), index=X.index)
 
     return X
 
 
-def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, missingness):
+def get_semi_supervised_autoencoded_data(case, ev_model, iteration, missingness):
     '''
     show majority samples to autoencoder to learn latent space. Idea is it learns a latent space that captures the underlying patterns of normal behavior.
     Then, when new data is projected into this latent space, deviations from normal patterns can be more easily separated using a supervised classifier.
@@ -154,7 +154,7 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
     '''
     treepath, value_path = get_input_data_paths(case, ev_model, iteration)
 
-    distances = pd.read_csv(os.path.join(data_path, 'tree_distances.csv'), index_col=0)
+    distances = pd.read_csv(os.path.join(treepath, 'tree_distances.csv'), index_col=0)
 
     full_df, distance_vars, target_name = add_y_to_data(distances, case, ev_model, iteration, missingness)
 
@@ -174,11 +174,11 @@ def get_semi_supervised_autoencoded_data(real_or_sim, bin_or_cont, iteration, mi
     return out_df, encoding_vars, target_name
 
 
-def get_eigenvectors(real_or_sim, bin_or_cont, iteration):
+def get_eigenvectors(case, ev_model, iteration):
     treepath, value_path = get_input_data_paths(case, ev_model, iteration)
-    X = pd.read_csv(os.path.join(data_path, 'all_eigenvectors.csv'), index_col=0)
+    X = pd.read_csv(os.path.join(treepath, 'all_eigenvectors.csv'), index_col=0)
 
-    broken_stick_params = pd.read_csv(os.path.join(data_path, 'broken_stick_parameters.csv'), index_col=0)
+    broken_stick_params = pd.read_csv(os.path.join(treepath, 'broken_stick_parameters.csv'), index_col=0)
     num_cols_to_use = broken_stick_params['broken_stick_number'].iloc[0]
     X = X.iloc[:, : num_cols_to_use]
     ## Scale the data
@@ -189,26 +189,22 @@ def get_eigenvectors(real_or_sim, bin_or_cont, iteration):
 def run_predictions():
     for iteration in tqdm(range(1, number_of_simulation_iterations + 1)):
         for m in missingness_types:
-            for bin_or_cont in ['binary', 'continuous']:
-                # sim_list = ['real_data']
-                sim_list = ['simulations', 'Extinct_BMT']
-                if bin_or_cont == 'continuous':
-                    sim_list += ['BMT', 'EB']
-                if bin_or_cont == 'binary':
-                    sim_list += ['BISSE', 'HISSE']
+            for case in ['ultrametric', 'with_extinct']:
+                for ev_model in simulation_types['binary'] + simulation_types['continuous']:
+                    if ev_model in ['BIEN', 'MPNS'] and case == 'with_extinct':
+                        continue
 
-                for real_or_sim in sim_list:
-
-                    umap_X = get_umap_data(real_or_sim, bin_or_cont, iteration)
+                    umap_X = get_umap_data(case, ev_model, iteration)
                     umap_df, umap_encoding_vars, umap_target_name = add_y_to_data(umap_X, case, ev_model, iteration, m)
 
-                    eigen_X = get_eigenvectors(real_or_sim, bin_or_cont, iteration)
+                    eigen_X = get_eigenvectors(case, ev_model, iteration)
                     eigen_df, eigen_encoding_vars, eigen_target_name = add_y_to_data(eigen_X, case, ev_model, iteration, m)
 
-                    autoenc_X = get_autoencoded_data(real_or_sim, bin_or_cont, iteration)
+                    autoenc_X = get_autoencoded_data(case, ev_model, iteration)
                     autoenc_df, autoenc_encoding_vars, autoenc_target_name = add_y_to_data(autoenc_X, case, ev_model, iteration, m)
-                    out_dir = get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, m)
+                    out_dir = get_prediction_data_paths(case, ev_model, iteration, m)
 
+                    bin_or_cont = get_bin_or_cont_from_ev_model(ev_model)
                     if bin_or_cont == 'binary':
                         # Compare logistic regression and XGBoost models i.e. for modelling simpler relationships and complex relationships
                         clf_instance = LogisticRegression(**logit_init_kwargs)
@@ -228,8 +224,8 @@ def run_predictions():
                                        eigen_target_name, bin_or_cont)
                         #
                         # # ### Semisupervised umap
-                        semi_supervised_umap_df, semi_sup_umap_encoding_vars, semi_sup_umap_target_name = get_semi_supervised_umap_data(real_or_sim,
-                                                                                                                                        bin_or_cont,
+                        semi_supervised_umap_df, semi_sup_umap_encoding_vars, semi_sup_umap_target_name = get_semi_supervised_umap_data(case,
+                                                                                                                                        ev_model,
                                                                                                                                         iteration, m)
                         clf_instance = LogisticRegression(**logit_init_kwargs)
                         fit_and_output(clf_instance, logit_grid_search_params, out_dir, 'logit_umap_supervised', semi_supervised_umap_df,
@@ -252,8 +248,7 @@ def run_predictions():
 
                         ## Semisupervised autoenc
                         semi_supervised_autoenc_df, semi_sup_autoenc_encoding_vars, semi_sup_autoenc_target_name = get_semi_supervised_autoencoded_data(
-                            real_or_sim,
-                            bin_or_cont,
+                            case, ev_model,
                             iteration, m)
 
                         clf_instance = LogisticRegression(**logit_init_kwargs)

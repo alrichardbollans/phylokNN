@@ -17,8 +17,9 @@ format_phylopars <- function(phylopars_predictions,kfold_test_plants, target){
   return(output_data)
 }
 
-run_phylopars_models <- function(real_or_sim, bin_or_cont, iteration, missing_type){
-  setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
+run_phylopars_models <- function(case, simulation_ev_model, iteration, missing_type, bin_or_cont){
+  print(paste('running phylopars', case, simulation_ev_model, iteration, missing_type, sep=':'))
+  setup_ = set_up(case, simulation_ev_model, iteration, missing_type)
   labelled_tree = setup_$labelled_tree
   # if(!ape::is.ultrametric(labelled_tree)){
   #   labelled_tree = phytools::force.ultrametric(labelled_tree) # phylopars needs an ultrametric tree but only for OU model
@@ -96,10 +97,11 @@ run_phylopars_models <- function(real_or_sim, bin_or_cont, iteration, missing_ty
   
   final_out = format_phylopars(final_phylopars_predictions, plants_to_predict,target)
   
-  dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
-  write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'phylopars.csv'), row.names = FALSE)
+  out_path = get_prediction_data_paths(case, simulation_ev_model, iteration, missing_type)
+  dir.create(out_path, recursive=TRUE)
+  write.csv(final_out, file.path(out_path, 'phylopars.csv'), row.names = FALSE)
   
   param_df = data.frame(best_ev_model=c(best_ev_model))
-  write.csv(param_df, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'phylopars_hparams.csv'), row.names = FALSE)
+  write.csv(param_df, file.path(out_path, 'phylopars_hparams.csv'), row.names = FALSE)
   
 }

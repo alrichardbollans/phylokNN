@@ -1,6 +1,6 @@
 
 number_of_folds=5
-possible_corr_ev_models = c('ARD', 'ER','SYM')
+possible_corr_ev_models = c('ARD', 'ER')
 
 possible_rate_cats = c(1,2)
 
@@ -9,39 +9,29 @@ source(file.path(repo_path, 'phyloKNN', 'analysis', 'data','helpful_phyl_methods
 input_data_path = file.path(repo_path, 'phyloKNN', 'analysis', 'data')
 prediction_path = file.path(repo_path, 'phyloKNN', 'analysis', 'imputation')
 
-nonstandard_sim_types = c('BMT', 'EB', 'BISSE', 'HISSE')
-extinct_sim_types = c('Extinct_BMT')
 
-get_iteration_path_from_base <- function(base, real_or_sim, bin_or_cont, iteration) {
-  if (real_or_sim == "real_data" || real_or_sim == "simulations" || real_or_sim == "my_apm_data") {
-    basepath <- file.path(base, real_or_sim)
-  } else if(real_or_sim %in% nonstandard_sim_types){
-    basepath = file.path(base, 'non_standard_simulations', real_or_sim)
+get_iteration_path_from_base <- function(base, case, ev_model, iteration) {
+  if (ev_model == "BiSSE" || ev_model == "HiSSE") {
+    basepath <- file.path(base,'simulations', case, ev_model)
+  } else if(ev_model %in% c('MPNS', 'BIEN')){
+    basepath = file.path(base, 'real_data', case, ev_model)
     
-  }else if(real_or_sim %in% extinct_sim_types){
-    basepath = file.path(base, 'non_ultrametric_simulations', real_or_sim)
-    
-  } else {
-    stop("Unknown real or simulation data")
+  }else {
+    basepath = file.path(base, 'simulations', case, 'standard')
   }
 
-  if (bin_or_cont == "binary" || bin_or_cont == "continuous") {
-    nextpath <- file.path(basepath, bin_or_cont)
-  } else {
-    stop(paste("Unknown data type", bin_or_cont))
-  }
+   treepath = file.path(basepath, as.character(iteration))
+    value_path = file.path(basepath, as.character(iteration), ev_model)
 
-  iterpath <- file.path(nextpath, as.character(iteration))
-
-  return(iterpath)
+  return(list(treepath=treepath,value_path=value_path ))
 }
 
-get_input_data_paths <- function(real_or_sim, bin_or_cont, iteration) {
-  return(get_iteration_path_from_base(input_data_path, real_or_sim, bin_or_cont, iteration))
+get_input_data_paths <- function(case, ev_model, iteration) {
+  return(get_iteration_path_from_base(input_data_path, case, ev_model, iteration))
 }
 
-get_prediction_data_paths <- function(real_or_sim, bin_or_cont, iteration, missingness_type) {
-  return(file.path(get_iteration_path_from_base(prediction_path, real_or_sim, bin_or_cont, iteration), missingness_type))
+get_prediction_data_paths <- function(case, ev_model, iteration, missingness_type) {
+  return(file.path(prediction_path, case, ev_model, as.character(iteration), missingness_type))
 }
 
 # Methods to format PI outputs to standarise like phyestimatedisc output
@@ -73,13 +63,14 @@ format_corhmm <- function(corhmm_output, plant_names_to_predict, ratecat){
   return(output_data)
 }
 
-set_up <- function(real_or_sim, bin_or_cont, iteration, missing_type){
+set_up <- function(case, ev_model, iteration, missing_type){
   
-  data_path = get_input_data_paths(real_or_sim, bin_or_cont, iteration)
-  missing_values = read.csv(file.path(data_path, paste(missing_type,'_values.csv',sep='')))
+  input_data = get_input_data_paths(case, ev_model, iteration)
+
+  missing_values = read.csv(file.path(input_data$value_path, paste(missing_type,'_values.csv',sep='')))
   
 
-  prepared_tree = ape::read.tree(file.path(data_path, 'tree.tre'))
+  prepared_tree = ape::read.tree(file.path(input_data$treepath, 'tree.tre'))
 
   # prepared_tree = set_labels_on_tree_to_acc_name(tree)
   labelled_tree = get_subset_of_tree_from_data(missing_values,prepared_tree)
@@ -120,11 +111,12 @@ calculate_inverse_AP <- function(y_score,y_true){
   return(score)
 }
 
-run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type, scorer){
+run_corHMM_models <- function(case, simulation_ev_model, iteration, missing_type, bin_or_cont, scorer){
+    print(paste('running corhmm', case, simulation_ev_model, iteration, missing_type, sep=':'))
     if (missing(scorer)) {
       scorer = 'brier'
     }
-    setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
+    setup_ = set_up(case, simulation_ev_model, iteration, missing_type)
     labelled_tree = setup_$labelled_tree
     missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
     target = setup_$target
@@ -158,7 +150,7 @@ run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type,
             try(
               {
                 corHMM_predicted_values = corHMM::corHMM(training_tree, cor_trait_data,model=ev_model,
-                                                         rate.cat = 1, get.tip.states = TRUE, n.cores = 10)
+                                                         rate.cat = rate_cat, get.tip.states = TRUE, n.cores = 10)
                 
                 out = format_corhmm(corHMM_predicted_values, kfold_test_plants, rate_cat)
                 
@@ -233,11 +225,11 @@ run_corHMM_models <- function(real_or_sim, bin_or_cont, iteration, missing_type,
     }
     
     
-    
-    dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
-    write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'corHMM.csv'), row.names = FALSE)
+    outpath = get_prediction_data_paths(case, simulation_ev_model, iteration, missing_type)
+    dir.create(outpath, recursive=TRUE)
+    write.csv(final_out, file.path(outpath, 'corHMM.csv'), row.names = FALSE)
     param_df = data.frame(best_ev_model=c(best_ev_model), best_rate_cat=c(best_rate_cat))
-    write.csv(param_df, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'corHMM_hparams.csv'), row.names = FALSE)
+    write.csv(param_df, file.path(outpath, 'corHMM_hparams.csv'), row.names = FALSE)
     
 }
 
@@ -304,11 +296,12 @@ run_picante_instance<- function(bin_or_cont,trait_data,target,plants_to_predict,
   return(output_data)
 }
 
-run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type, scorer){
+run_picante_models <- function(case, simulation_ev_model, iteration, missing_type, bin_or_cont, scorer){
+  print(paste('running picante', case, simulation_ev_model, iteration, missing_type, sep=':'))
   if (missing(scorer)) {
     scorer = 'brier'
   }
-  setup_ = set_up(real_or_sim, bin_or_cont, iteration, missing_type)
+  setup_ = set_up(case, simulation_ev_model, iteration, missing_type)
   labelled_tree = setup_$labelled_tree
   if(!ape::is.binary(labelled_tree)){
     labelled_tree=ape::multi2di(labelled_tree)
@@ -322,7 +315,7 @@ run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type
     training_tree=ape::multi2di(training_tree)
   }
   if (bin_or_cont == "binary") {
-    possible_picante_ev_models = c('ARD', 'ER','SYM')
+    possible_picante_ev_models = c('ARD', 'ER')# 'ER' and SYM same for binary traits
     possible_picante_methods = c('ML') ## Only ML is available for discrete characters. See https://rdrr.io/cran/ape/man/ace.html
   } else if  (bin_or_cont == "continuous"){
     possible_picante_ev_models = c('BM')#, 'mvOU','OU', "lambda", "kappa", "delta", "EB", "star") #check https://github.com/emmanuelparadis/ape/issues/139
@@ -429,10 +422,11 @@ run_picante_models <- function(real_or_sim, bin_or_cont, iteration, missing_type
       stop(paste("Found unique target for continuous case", bin_or_cont))
     }
   }
-  dir.create(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), recursive=TRUE)
-  write.csv(final_out, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'picante.csv'), row.names = FALSE)
+  outpath = get_prediction_data_paths(case, simulation_ev_model, iteration, missing_type)
+  dir.create(outpath, recursive=TRUE)
+  write.csv(final_out, file.path(outpath, 'picante.csv'), row.names = FALSE)
   param_df = data.frame(best_ev_model=c(best_ev_model), best_method=c(best_method))
-  write.csv(param_df, file.path(get_prediction_data_paths(real_or_sim, bin_or_cont, iteration, missing_type), 'picante_hparams.csv'), row.names = FALSE)
+  write.csv(param_df, file.path(outpath, 'picante_hparams.csv'), row.names = FALSE)
   
 }
 
