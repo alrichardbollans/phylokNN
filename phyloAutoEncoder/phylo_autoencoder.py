@@ -2,7 +2,6 @@ import os
 
 import keras
 import pandas as pd
-import visualkeras
 from keras import callbacks
 from keras.src.layers import PReLU
 from matplotlib import pyplot as plt
@@ -12,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 
 
 def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fraction: float, _output_dir: str = None, plot=False):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # If  want to use CPU as GPU doesn't have enough memory
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # If  want to use CPU as GPU doesn't have enough memory
 
     ### Scale the data
     scaled_distance_data = pd.DataFrame(StandardScaler().fit_transform(distance_data), index=distance_data.index, columns=distance_data.columns)
@@ -67,8 +66,8 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
                                dpi=300
                                )
 
-        from PIL import ImageFont
-        font = ImageFont.load_default()
+        # from PIL import ImageFont
+        # font = ImageFont.load_default()
         # visualkeras.layered_view(autoencoder, legend=True, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_visual.png'),font=font)
         # visualkeras.graph_view(autoencoder,ellipsize_after=50, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder_graph.png'),)
 

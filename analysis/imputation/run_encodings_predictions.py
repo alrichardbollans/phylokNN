@@ -1,4 +1,6 @@
 import os
+import sys
+
 
 import pandas as pd
 import umap
@@ -9,6 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 from xgboost import XGBClassifier, XGBRegressor
 
+sys.path.append('../..')
 from analysis.data.helper_functions import number_of_simulation_iterations, reduction_factor, simulation_types
 from analysis.imputation.helper_functions import missingness_types, get_input_data_paths, \
     get_prediction_data_paths, n_split_for_nested_cv, get_bin_or_cont_from_ev_model

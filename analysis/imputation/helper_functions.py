@@ -1,11 +1,12 @@
 import os.path
 import pathlib
 import pickle
+import sys
 
 import pandas as pd
 from sklearn.metrics import make_scorer, mean_absolute_error, brier_score_loss
 from sklearn.model_selection import KFold
-
+sys.path.append('../..')
 from analysis.data.helper_functions import input_data_path, simulation_types
 from phylokNN import nan_safe_metric_wrapper, phyloNN_bayes_opt, PhylNearestNeighbours
 
@@ -22,6 +23,8 @@ def get_iteration_path_from_base(base: str, case: str, ev_model: str, iteration:
 
     elif ev_model in ['MPNS', 'BIEN']:
         basepath = os.path.join(base, 'real_data', case, ev_model)
+    elif ev_model in ['APM']:
+        basepath = os.path.join(base, 'my_apm_data', case, ev_model)
 
     else:
         basepath = os.path.join(base, 'simulations', case, 'standard')
@@ -61,7 +64,7 @@ def check_data(ground_truth, missing_values):
 
 
 def get_bin_or_cont_from_ev_model(ev_model: str):
-    if ev_model in simulation_types['binary']:
+    if ev_model in simulation_types['binary'] or ev_model=='APM':
         return 'binary'
     elif ev_model in simulation_types['continuous']:
         return 'continuous'
