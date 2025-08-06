@@ -27,7 +27,7 @@ get_OU_sample <- function(simulation_path){
     tree = ape::read.tree(file.path(simulation_path, 'tree.tre'))
     # https://revbayes.github.io/tutorials/cont_traits/simple_ou.html
     # alpha selection follows TDIP (https://github.com/Matgend/TDIP/blob/62c6655f7da66b0f89a48554a8eba7e697ea36eb/R/utils.R#L154)
-    Alpha <- alpha <- exp(runif(1, log(0.5), log(2))) # The character is pulled toward the optimum by the rate of adaptation, α
+    Alpha <- runif(1, 0.5, 2) # The character is pulled toward the optimum by the rate of adaptation, α
     # Theta selection follows TDIP (https://github.com/Matgend/TDIP/blob/62c6655f7da66b0f89a48554a8eba7e697ea36eb/R/data_simulator.R#L262)
     Theta <- runif(1, min = -10, max = 10) # a continuous character is assumed to evolve toward an optimal value, θ
     
