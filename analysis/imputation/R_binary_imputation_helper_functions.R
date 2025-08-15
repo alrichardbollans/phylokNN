@@ -126,6 +126,9 @@ run_corHMM_models <- function(case, simulation_ev_model, iteration, missing_type
       if (missing(scorer)) {
         scorer = 'brier'
       }
+      if (!(scorer %in% c('brier', 'AP'))) {
+        stop('Incorrectly specified scorer')
+      }
       setup_ = set_up(case, simulation_ev_model, iteration, missing_type)
       labelled_tree = setup_$labelled_tree
       missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
@@ -174,8 +177,6 @@ run_corHMM_models <- function(case, simulation_ev_model, iteration, missing_type
                     brier_score_for_this_fold = calculate_brier(f_t,o_t)
                   } else if( scorer == 'AP'){
                     brier_score_for_this_fold = calculate_inverse_AP(f_t,o_t)
-                  } else{
-                    stop('Incorrectly specified scorer')
                   }
                   
                   if(!is.na(brier_score_for_this_fold)){

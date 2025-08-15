@@ -12,7 +12,7 @@ from analysis.data.helper_functions import number_of_simulation_iterations, simu
 from analysis.evaluation.helper_functions import bin_model_names, cont_model_names
 from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, get_bin_or_cont_from_ev_model
 
-
+_iterations_still_to_run = []
 def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, missing_values: pd.DataFrame):
     assert missing_values.shape[0] == ground_truth.shape[0]
     assert missing_values.shape[1] == ground_truth.shape[1]
@@ -67,6 +67,7 @@ def get_model_predictions(case: str, ev_model: str, iteration: int, missing_type
             dfs.append(model_df)
         except FileNotFoundError:
             print(f'Missing {model_name} for {ev_model} {bin_or_cont} {iteration} {missing_type}')
+            _iterations_still_to_run.append(iteration)
     check_prediction_data(dfs, ground_truth, missing_values)
 
     try:
@@ -148,17 +149,6 @@ def output_results_from_df(full_df: pd.DataFrame, out_dir: str, ev_model: str, s
     bin_or_cont = get_bin_or_cont_from_ev_model(ev_model)
     model_names = get_model_names(bin_or_cont)
 
-    ttest_dict = {}
-    for pair in list(combinations(model_names, 2)):
-        model_name1, model_name2 = pair
-        if model_name1 in full_df.columns and model_name2 in full_df.columns:
-            t_stat, p_value = ttest_rel(full_df[model_name1], full_df[model_name2], nan_policy='omit')
-            ttest_dict[f'{model_name1}_{model_name2}'] = [t_stat, p_value]
-    # Convert to a DataFrame
-    ttest_df = pd.DataFrame(ttest_dict, index=['stat', 'p value'])
-
-    # Save to CSV
-    ttest_df.to_csv(os.path.join(out_dir, f'ttest_results.csv'))
 
     plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, scorer_label=scorer_label)
 
@@ -195,11 +185,16 @@ def read_all_results():
         ev_model_df = pd.read_csv(os.path.join('compiled_score_outputs', ev_model, 'results.csv'))
         continuous_df = pd.concat([continuous_df, ev_model_df])
 
+    binary_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'binary_results_summary.csv'))
+    continuous_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'continuous_results_summary.csv'))
+
     return binary_df, continuous_df
 
 def main():
     collate_simulation_outputs('APM',range_to_eval=10, out_dir='APM_outputs', scorer=average_precision_score)
     for ev_model in simulation_types['binary'] + simulation_types['continuous']:
         collate_simulation_outputs(ev_model)
+
+    print(set(_iterations_still_to_run))
 if __name__ == '__main__':
     main()

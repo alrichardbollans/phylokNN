@@ -72,10 +72,9 @@ def check_scales():
 
 
 def output_df(df, bin_or_cont, out_dir, group: str = 'Ev Model'):
-    for ev_model in df[group].unique():
-        ev_df = df[df[group] == ev_model]
-        ev_df = ev_df.sort_values(by=['Mean Loss'])
-        filename = "".join(x for x in ev_model if x.isalnum())
+    for group_member in df[group].unique():
+        ev_df = df[df[group] == group_member]
+        filename = "".join(x for x in group_member if x.isalnum())
         out_path = os.path.join(out_dir, bin_or_cont)
         pathlib.Path(out_path).mkdir(exist_ok=True, parents=True)
-        ev_df.to_csv(os.path.join(out_path, f'{filename}_mean_results.csv'))
+        ev_df.describe(include='all').to_csv(os.path.join(out_path, f'{filename}_mean_results.csv'))

@@ -1,7 +1,7 @@
 library(doParallel)
 library(foreach)
 
-num_cores <- 64#set to 32 as this function seems to find all threads on cluster node detectCores()  # Use all cores
+num_cores <- 4#set to 32 as this function seems to find all threads on cluster node detectCores()  # Use all cores
 cl <- makeCluster(num_cores)
 registerDoParallel(cl)
 

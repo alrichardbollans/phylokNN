@@ -43,6 +43,10 @@ run_phylopars_models <- function(case, simulation_ev_model, iteration, missing_t
     best_mae = -1
     best_ev_model = possible_phylopars_models[1]
     for (ev_model in possible_phylopars_models) {
+      if((ev_model == 'OU' & case == 'with_extinct') | (ev_model == 'mvOU' & case == 'with_extinct')){
+        print('OU model not currently supported for non-ultrametric trees.')
+      }else{
+        
       
       mae_for_this_config = 0
       number_of_successful_folds = 0
@@ -86,7 +90,7 @@ run_phylopars_models <- function(case, simulation_ev_model, iteration, missing_t
           best_ev_model = ev_model
         }
       }
-      
+      }
     }
     
     # Now use best model
@@ -94,7 +98,7 @@ run_phylopars_models <- function(case, simulation_ev_model, iteration, missing_t
     
     final_phylopars_data = data.frame(final_test_data_with_tree_labels)
     colnames(final_phylopars_data)[1]  <- "species" #First column name of trait_data MUST be 'species' (all lower case).
-    
+
     final_phylopars_data = subset(final_phylopars_data, select = c("species", target))
     final_p_v = Rphylopars::phylopars(final_phylopars_data, labelled_tree, model = best_ev_model)
     final_phylopars_predictions = final_p_v$anc_recon
