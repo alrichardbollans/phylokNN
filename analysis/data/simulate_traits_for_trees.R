@@ -124,7 +124,7 @@ get_binary_BMT_sample <- function(simulation_path){
   df['trait_BM_trend_scaled'] <- +(df$trait_BM_trend_scaled > threshold)
 
   out = list(tree=tree, FinalData= df, Dataframe=cont_example$Dataframe)
-  output_simulation(simulation_path, out, 'BMT*')
+  output_simulation(simulation_path, out, 'bBMT')
 
 }
 

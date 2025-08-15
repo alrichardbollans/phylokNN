@@ -13,7 +13,7 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
   
   missingness_types = c('mcar', 'phyloNa')
   cases = c('ultrametric', 'with_extinct')
-  binary_ev_models = c('ER', 'ARD', 'BiSSE', 'HiSSE', 'BMT*', 'MPNS')
+  binary_ev_models = c('ER', 'ARD', 'BiSSE', 'HiSSE', 'bBMT', 'MPNS')
   continuous_ev_models = c('BM', 'OU', 'EB', 'LB', 'BMT', 'BIEN')
   print(iter)
   for (missing_type in missingness_types) {

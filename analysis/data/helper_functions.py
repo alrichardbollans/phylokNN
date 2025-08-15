@@ -8,7 +8,7 @@ number_of_simulation_iterations = 100
 
 reduction_factor = 0.1
 
-simulation_types = {'binary':['ER', 'ARD', 'BiSSE', 'HiSSE', 'BMT*', 'MPNS'],
+simulation_types = {'binary':['ER', 'ARD', 'BiSSE', 'HiSSE', 'bBMT', 'MPNS'],
                     'continuous':['BM', 'OU', 'EB', 'LB', 'BMT', 'BIEN']}
 
 
