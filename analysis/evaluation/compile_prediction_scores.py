@@ -5,11 +5,12 @@ from itertools import combinations
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
-from scipy.stats import ttest_rel
+import seaborn as sns
 from sklearn.metrics import brier_score_loss, mean_absolute_error, average_precision_score
 
 from analysis.data.helper_functions import number_of_simulation_iterations, simulation_types
-from analysis.evaluation.helper_functions import bin_model_names, cont_model_names
+from analysis.evaluation.helper_functions import bin_model_names, cont_model_names, rename_models_and_ev_models, \
+    binary_model_order, continuous_model_order
 from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, get_bin_or_cont_from_ev_model
 
 _iterations_still_to_run = []
@@ -174,7 +175,7 @@ def collate_simulation_outputs(ev_model: str,
     return full_df
 
 
-def read_all_results():
+def read_all_results(output_too = False):
     binary_df = pd.DataFrame()
     for ev_model in simulation_types['binary']:
         ev_model_df = pd.read_csv(os.path.join('compiled_score_outputs', ev_model, 'results.csv'))
@@ -185,8 +186,30 @@ def read_all_results():
         ev_model_df = pd.read_csv(os.path.join('compiled_score_outputs', ev_model, 'results.csv'))
         continuous_df = pd.concat([continuous_df, ev_model_df])
 
-    binary_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'binary_results_summary.csv'))
-    continuous_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'continuous_results_summary.csv'))
+    if output_too:
+        binary_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'binary_results_summary.csv'))
+        continuous_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'continuous_results_summary.csv'))
+
+        err_kws = {"color": ".2", "linewidth": 1.5}
+        p_df = pd.melt(binary_df, value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
+        p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
+        g = sns.barplot(p_df, x='Model', y='Mean Loss', order=binary_model_order,
+                        capsize=.4, err_kws=err_kws)
+        g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+        plt.tight_layout()
+        plt.savefig(os.path.join('compiled_score_outputs', 'binary_means.jpg'), dpi=300)
+        plt.close()
+
+        p_df = pd.melt(continuous_df, value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
+        p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
+        g = sns.barplot(p_df, x='Model', y='Mean Loss', order=continuous_model_order,
+                        capsize=.4,
+                        err_kws=err_kws,
+                        )
+        g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+        plt.tight_layout()
+        plt.savefig(os.path.join('compiled_score_outputs', 'continuous_means.jpg'), dpi=300)
+        plt.close()
 
     return binary_df, continuous_df
 
@@ -196,5 +219,6 @@ def main():
         collate_simulation_outputs(ev_model)
 
     print(set(_iterations_still_to_run))
+    read_all_results(output_too=True)
 if __name__ == '__main__':
     main()
