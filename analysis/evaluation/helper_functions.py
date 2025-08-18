@@ -8,12 +8,12 @@ from matplotlib import pyplot as plt
 
 from analysis.data.helper_functions import number_of_simulation_iterations
 
-bin_model_names = ['corHMM', 'picante', 'phylnn_raw', 'phylnn_fill_means',
+bin_model_names = ['corHMM',  'phylnn_raw', 'phylnn_fill_means',
                    'logit_eigenvecs', 'logit_umap', 'logit_umap_supervised', 'logit_autoencoded',
                    'logit_autoenc_supervised',
                    'xgb_eigenvecs', 'xgb_umap', 'xgb_umap_supervised', 'xgb_autoencoded', 'xgb_autoenc_supervised']
 bin_model_names.remove('phylnn_raw')
-cont_model_names = ['phylopars', 'picante', 'phylnn_raw', 'phylnn_fill_means',
+cont_model_names = ['phylopars',  'phylnn_raw', 'phylnn_fill_means',
                     'linear_eigenvecs', 'linear_umap', 'linear_autoencoded',
                     'xgb_eigenvecs', 'xgb_umap', 'xgb_autoencoded']
 cont_model_names.remove('phylnn_raw')
@@ -33,11 +33,11 @@ rename_models_and_ev_models = {'phylnn_fill_means': 'phylokNN', 'logit_eigenvecs
                                'xgb_autoencoded_full_tree': 'Autoenc (Full tree) (XGB)'
                                }
 
-binary_model_order = ['corHMM', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)',
+binary_model_order = ['corHMM', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)', 'UMAP* (L)',
                       'UMAP (XGB)', 'UMAP* (XGB)',
                       'Autoenc (L)', 'Autoenc* (L)', 'Autoenc (XGB)', 'Autoenc* (XGB)']
 
-continuous_model_order = ['phylopars', 'picante', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)',
+continuous_model_order = ['phylopars', 'phylokNN', 'Eigenvec (L)', 'Eigenvec (XGB)', 'UMAP (L)',
                           'UMAP (XGB)',
                           'Autoenc (L)', 'Autoenc (XGB)']
 

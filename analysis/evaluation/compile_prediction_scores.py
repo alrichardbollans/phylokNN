@@ -14,6 +14,8 @@ from analysis.evaluation.helper_functions import bin_model_names, cont_model_nam
 from analysis.imputation.helper_functions import get_input_data_paths, get_prediction_data_paths, missingness_types, get_bin_or_cont_from_ev_model
 
 _iterations_still_to_run = []
+
+
 def check_prediction_data(dfs: list[pd.DataFrame], ground_truth: pd.DataFrame, missing_values: pd.DataFrame):
     assert missing_values.shape[0] == ground_truth.shape[0]
     assert missing_values.shape[1] == ground_truth.shape[1]
@@ -150,12 +152,11 @@ def output_results_from_df(full_df: pd.DataFrame, out_dir: str, ev_model: str, s
     bin_or_cont = get_bin_or_cont_from_ev_model(ev_model)
     model_names = get_model_names(bin_or_cont)
 
-
     plot_results(full_df, [c for c in model_names if c in full_df.columns], out_dir, scorer_label=scorer_label)
 
 
 def collate_simulation_outputs(ev_model: str,
-                               range_to_eval: int = number_of_simulation_iterations, scorer=None, out_dir =None):
+                               range_to_eval: int = number_of_simulation_iterations, scorer=None, out_dir=None):
     full_df = pd.DataFrame()
     for tag in range(1, range_to_eval + 1):
         for case in ['ultrametric', 'with_extinct']:
@@ -175,7 +176,7 @@ def collate_simulation_outputs(ev_model: str,
     return full_df
 
 
-def read_all_results(output_too = False):
+def read_all_results(output_too=False):
     binary_df = pd.DataFrame()
     for ev_model in simulation_types['binary']:
         ev_model_df = pd.read_csv(os.path.join('compiled_score_outputs', ev_model, 'results.csv'))
@@ -189,7 +190,7 @@ def read_all_results(output_too = False):
     if output_too:
         binary_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'binary_results_summary.csv'))
         continuous_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'continuous_results_summary.csv'))
-
+        sns.set_theme()
         err_kws = {"color": ".2", "linewidth": 1.5}
         p_df = pd.melt(binary_df, value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
         p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
@@ -213,12 +214,15 @@ def read_all_results(output_too = False):
 
     return binary_df, continuous_df
 
+
 def main():
-    collate_simulation_outputs('APM',range_to_eval=10, out_dir='APM_outputs', scorer=average_precision_score)
+    collate_simulation_outputs('APM', range_to_eval=10, out_dir='APM_outputs', scorer=average_precision_score)
     for ev_model in simulation_types['binary'] + simulation_types['continuous']:
         collate_simulation_outputs(ev_model)
 
     print(set(_iterations_still_to_run))
     read_all_results(output_too=True)
+
+
 if __name__ == '__main__':
     main()
