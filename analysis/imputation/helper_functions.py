@@ -21,7 +21,7 @@ def get_iteration_path_from_base(base: str, case: str, ev_model: str, iteration:
     if ev_model in ['BiSSE', 'HiSSE']:
         basepath = os.path.join(base,'simulations', case, ev_model)
 
-    elif ev_model in ['MPNS', 'BIEN']:
+    elif ev_model in ['MPNS', 'Seed Mass']:
         basepath = os.path.join(base, 'real_data', case, ev_model)
     elif ev_model in ['APM']:
         basepath = os.path.join(base, 'my_apm_data', case, ev_model)

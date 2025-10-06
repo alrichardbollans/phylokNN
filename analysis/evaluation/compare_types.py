@@ -59,7 +59,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
     ## do a useful plot
     p_df = pd.melt(cont_df, id_vars=group, value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
     # p_df['Ev Model'] = p_df['Ev Model'].map(
-    #     {'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †', 'real_data': 'BIEN'}).fillna(p_df['Ev Model'])
+    #     {'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †', 'real_data': 'Seed Mass'}).fillna(p_df['Ev Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
     if group == 'Ev Model':
         ev_order = simulation_types['continuous']

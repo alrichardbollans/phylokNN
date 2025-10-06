@@ -14,7 +14,7 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
   missingness_types = c('mcar', 'phyloNa')
   cases = c('ultrametric', 'with_extinct')
   binary_ev_models = c('ER', 'ARD', 'BiSSE', 'HiSSE', 'bBMT', 'MPNS')
-  continuous_ev_models = c('BM', 'OU', 'EB', 'LB', 'BMT', 'BIEN')
+  continuous_ev_models = c('BM', 'OU', 'EB', 'LB', 'BMT', 'Seed Mass')
   print(iter)
   for (missing_type in missingness_types) {
     for(simulation_ev_model in binary_ev_models){# Keep the inner loop sequential
@@ -32,7 +32,7 @@ foreach(iter = 1:number_of_simulation_iterations) %dopar% {
     }
 
      for(simulation_ev_model in continuous_ev_models){# Keep the inner loop sequential
-        if(simulation_ev_model == 'BIEN'){
+        if(simulation_ev_model == 'Seed Mass'){
             run_phylopars_models('ultrametric', simulation_ev_model, iter, missing_type, 'continuous')
             run_picante_models('ultrametric', simulation_ev_model, iter, missing_type, 'continuous')
         }

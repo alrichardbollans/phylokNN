@@ -30,8 +30,24 @@ for(i in 1:number_of_repetitions){
 # Maitner, Brian S., Brad Boyle, Nathan Casler, Rick Condit, John Donoghue, Sandra M. Durán, Daniel Guaderrama, et al. ‘The bien r Package: A Tool to Access the Botanical Information and Ecology Network (BIEN) Database’. Edited by Sean McMahon. Methods in Ecology and Evolution 9, no. 2 (February 2018): 373–79. https://doi.org/10.1111/2041-210X.12861.
 
 
-# BIEN::BIEN_trait_list()
-FAMILIES_OF_INTEREST = c('Gelsemiaceae', 'Gentianaceae', 'Apocynaceae', 'Loganiaceae', 'Rubiaceae')
+bien_trait_list = BIEN::BIEN_trait_list()
+# FAMILIES_OF_INTEREST = c('Gelsemiaceae', 'Gentianaceae', 'Apocynaceae', 'Loganiaceae', 'Rubiaceae')
+# for (trait in bien_trait_list){
+#   binary_trait = data.frame()
+#   for (fam in FAMILIES_OF_INTEREST) {
+#     fam_df = BIEN::BIEN_trait_traitbyfamily(family=fam, trait=trait)
+#     binary_trait = rbind(binary_trait,fam_df)
+#   }
+#   if(length(unique(binary_trait$trait_value))){
+#     print(trait)
+#     print(unique(binary_trait$trait_value))
+#     print(length(unique(binary_trait$trait_value)))
+#
+#   }
+#
+# }
+
+
 cont_df = data.frame()
 for (fam in FAMILIES_OF_INTEREST) {
   continuous_trait = BIEN::BIEN_trait_traitbyfamily(family=fam, trait='seed mass')
@@ -65,7 +81,7 @@ continuous_cases <- function(){
 for(i in 1:number_of_repetitions){
   cont_sample = continuous_cases()
   ape::is.ultrametric(cont_sample$tree)
-  sim_path = file.path("real_data",'ultrametric', 'BIEN', i)
+  sim_path = file.path("real_data",'ultrametric', 'Seed Mass', i)
   output_tree(sim_path, cont_sample$tree)
-  output_simulation(sim_path,cont_sample, 'BIEN')
+  output_simulation(sim_path,cont_sample, 'Seed Mass')
 }

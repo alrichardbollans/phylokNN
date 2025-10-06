@@ -194,7 +194,7 @@ def run_predictions():
         for m in missingness_types:
             for case in ['ultrametric', 'with_extinct']:
                 for ev_model in simulation_types['binary'] + simulation_types['continuous']:
-                    if ev_model in ['BIEN', 'MPNS'] and case == 'with_extinct':
+                    if ev_model in ['Seed Mass', 'MPNS'] and case == 'with_extinct':
                         continue
 
                     umap_X = get_umap_data(case, ev_model, iteration)

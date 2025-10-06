@@ -13,7 +13,7 @@ prediction_path = file.path(repo_path, 'phyloKNN', 'analysis', 'imputation')
 get_iteration_path_from_base <- function(base, case, ev_model, iteration) {
   if (ev_model == "BiSSE" || ev_model == "HiSSE") {
     basepath <- file.path(base,'simulations', case, ev_model)
-  } else if(ev_model %in% c('MPNS', 'BIEN')){
+  } else if(ev_model %in% c('MPNS', 'Seed Mass')){
     basepath = file.path(base, 'real_data', case, ev_model)
     
   }else if(ev_model %in% c('APM')){
