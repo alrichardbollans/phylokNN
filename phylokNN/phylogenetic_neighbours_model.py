@@ -34,8 +34,8 @@ class PhylNearestNeighbours(BaseEstimator):
         :param distance_matrix: A pandas DataFrame representing the distance matrix between instances. Indices and columns should be taxon names. Should include all train, test species and unknown species for predictions.
         :param clf: A boolean indicating whether to output binary classes or continuous estimates for final predictions
         :param ratio_max_branch_length: A float value for the ratio of the largest tree distance to use as maximum distance threshold.
-        :param kappa: A float values for Kappa used to modify branch lengths, similar to Pagel's Kappa frp, "‘Detecting Correlated Evolution on Phylogenies: A General Method for the Comparative Analysis of Discrete Characters’, Proceedings of the Royal Society of London. Series B: Biological Sciences 255, no. 1342 (22 January 1994): 37–45, https://doi.org/10.1098/rspb.1994.0006."
-
+        :param kappa: A float value for Kappa used to modify branch lengths, similar to Pagel's Kappa frp, "‘Detecting Correlated Evolution on Phylogenies: A General Method for the Comparative Analysis of Discrete Characters’, Proceedings of the Royal Society of London. Series B: Biological Sciences 255, no. 1342 (22 January 1994): 37–45, https://doi.org/10.1098/rspb.1994.0006."
+        :param fill_in_unknowns_with_mean: A boolean indicating how to impute values of tips which have no neighbours under the distance threshold to impute. If False, left as NaN. If true, assigned mean trait value from training data.
         """
 
         self.distance_matrix = distance_matrix  # .copy(deep=False) # Making a shallow copy to reduce RAM with multiple instances, but breaks when cloning class.
@@ -177,8 +177,8 @@ class PhylNearestNeighbours(BaseEstimator):
     def fit(self, X: ArrayLike, y: ArrayLike, sample_weight=None):
         """
         :param X: {array-like, sparse matrix} of shape (n_samples, n_features). The first column must be species names.
-        :param y: The target variable. An ArrayLike of shape (n_samples,).
-        :param sample_weight: Optional. The sample weights. array-like of shape (n_samples,) default=None
+        :param y: The target variable. An ArrayLike of shape (n_samples,). If this is a series, the index should be the same as the list of names from X, else order is assumed to match X
+        :param sample_weight: Optional. The sample weights. array-like of shape (n_samples,) default=None. If this is a series, the index should be the same as the list of names from X, else order is assumed to match X
         :return: None
         """
         X, y = validate_data(
