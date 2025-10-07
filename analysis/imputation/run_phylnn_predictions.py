@@ -11,7 +11,7 @@ def main():
         for m in missingness_types:
             for case in ['ultrametric', 'with_extinct']:
                 for ev_model in simulation_types['binary'] + simulation_types['continuous']:
-                    if ev_model in ['Seed Mass', 'MPNS'] and case == 'with_extinct':
+                    if ev_model in ['Seed Mass', 'Clonality'] and case == 'with_extinct':
                         continue
                     phylnn_predict(case, ev_model, tag, m)
 

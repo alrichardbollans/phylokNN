@@ -23,7 +23,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
     ## Turn  Model columns into useful row values
     p_df = pd.melt(bin_df, id_vars=group, value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
     # p_df['Ev Model'] = p_df['Ev Model'].map(
-    #     {'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †', 'real_data': 'MPNS'}).fillna(p_df['Ev Model'])
+    #     {'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †', 'real_data': 'Clonality'}).fillna(p_df['Ev Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
     if group == 'Ev Model':
         ev_order = simulation_types['binary']
@@ -98,8 +98,13 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
 def main():
     bin_df, cont_df = read_all_results()
     plot_binary_and_continuous_cases(bin_df, cont_df,'Ev Model', 'ev_model_outputs')
-    plot_binary_and_continuous_cases(bin_df, cont_df, 'Tree Type', 'tree_type_outputs')
     plot_binary_and_continuous_cases(bin_df, cont_df, 'Missing Type', 'missingness_outputs')
+
+    # Remove real data cases that are only ultrametric and so skew ultrametric vs. non-ultrametric results
+    tree_type_bin_df = bin_df[bin_df['Ev Model'] != 'Clonality']
+    tree_type_cont_df = cont_df[cont_df['Ev Model'] != 'Seed Mass']
+    plot_binary_and_continuous_cases(tree_type_bin_df, tree_type_cont_df, 'Tree Type', 'tree_type_outputs')
+
 
 
 if __name__ == '__main__':

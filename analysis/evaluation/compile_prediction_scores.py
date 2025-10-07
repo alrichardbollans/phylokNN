@@ -160,7 +160,7 @@ def collate_simulation_outputs(ev_model: str,
     full_df = pd.DataFrame()
     for tag in range(1, range_to_eval + 1):
         for case in ['ultrametric', 'with_extinct']:
-            if ev_model in ['Seed Mass', 'MPNS', 'APM'] and case == 'with_extinct':
+            if ev_model in ['Seed Mass', 'Clonality', 'APM'] and case == 'with_extinct':
                 continue
 
             for missing_type in missingness_types:

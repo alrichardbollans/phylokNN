@@ -37,7 +37,7 @@ def main():
             dir_path = os.path.join(input_data_path, 'simulations', case, 'HiSSE', str(tag))
             unsupervised_umap_wrapper(dir_path)
 
-        dir_path = os.path.join(input_data_path, 'real_data', 'ultrametric','MPNS', str(tag))
+        dir_path = os.path.join(input_data_path, 'real_data', 'ultrametric','Clonality', str(tag))
         unsupervised_umap_wrapper(dir_path)
 
         dir_path = os.path.join(input_data_path, 'real_data', 'ultrametric','Seed Mass', str(tag))

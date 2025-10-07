@@ -1,0 +1,2 @@
+,Baseline mse,train_loss,val_loss,number_of_epochs,latent space size
+0,1.0000000000000002,0.17872890830039978,0.21025125682353973,100,10

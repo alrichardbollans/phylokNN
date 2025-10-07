@@ -1,0 +1,2 @@
+Kimberly J. Komatsu et al., ‘CoRRE Trait Data: A Dataset of 17 Categorical and Continuous Traits for 4079 Grassland Species Worldwide’,
+Scientific Data 11, no. 1 (2024): 795, https://doi.org/10.1038/s41597-024-03637-x.

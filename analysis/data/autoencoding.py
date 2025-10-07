@@ -27,7 +27,7 @@ def main():
             unsup_model, unsupervised = autoencode_pairwise_distances(distances, reduction_factor, dir_path,plot=True)
             unsupervised.to_csv(os.path.join(dir_path, 'unsupervised_autoencoded_phylogeny.csv'))
 
-        dir_path = os.path.join(input_data_path, 'real_data', 'ultrametric','MPNS', str(tag))
+        dir_path = os.path.join(input_data_path, 'real_data', 'ultrametric','Clonality', str(tag))
         distances = pd.read_csv(os.path.join(dir_path, 'tree_distances.csv'), index_col=0)
         unsup_model, unsupervised = autoencode_pairwise_distances(distances, reduction_factor, dir_path,plot=True)
         unsupervised.to_csv(os.path.join(dir_path, 'unsupervised_autoencoded_phylogeny.csv'))

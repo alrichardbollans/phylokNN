@@ -6,12 +6,20 @@ source('helper_simulation_methods.R')
 repo_path = Sys.getenv('KEWSCRATCHPATH')
 species_tree = ape::read.tree(file.path(repo_path, 'gentianales_trees', 'WCVP_12', 'Uphy', 'outputs',
                                     'Species', 'Uphylomaker_species_tree.tre'))
-binary_data = read.csv(file.path('real_data', 'ultrametric','MPNS', 'binary_gentianales.csv'))
+
+### Binary case
+## Kimberly J. Komatsu et al., ‘CoRRE Trait Data: A Dataset of 17 Categorical and Continuous Traits for 4079 Grassland Species Worldwide’,
+## Scientific Data 11, no. 1 (2024): 795, https://doi.org/10.1038/s41597-024-03637-x.
+
+binary_data = read.csv(file.path('real_data', 'ultrametric','Clonality', 'clonality.csv'))
+binary_data = binary_data[,c("accepted_species", "trait_value")]
 binary_data['accepted_species'] <- lapply(binary_data['accepted_species'], replace_space_with_underscore_in_name)
+binary_data = binary_data[binary_data$accepted_species %in% species_tree$tip.label, ]
+binary_tree  = subset_tree(species_tree,binary_data$accepted_species)
 
 binary_cases <- function(){
-  sample_tips = sample(species_tree$tip.label,number_of_taxa)
-  sample_tree = subset_tree(species_tree,sample_tips)
+  sample_tips = sample(binary_tree$tip.label,number_of_taxa)
+  sample_tree = subset_tree(binary_tree,sample_tips)
   ground_truth = binary_data[binary_data$accepted_species %in% sample_tips,]
   rownames(ground_truth) <- ground_truth$accepted_species
   ground_truth <- subset(ground_truth, select = -c(accepted_species))
@@ -21,31 +29,19 @@ binary_cases <- function(){
 for(i in 1:number_of_repetitions){
   binary_sample = binary_cases()
   ape::is.ultrametric(binary_sample$tree)
-  sim_path = file.path("real_data",'ultrametric', 'MPNS', i)
+  sim_path = file.path("real_data",'ultrametric', 'Clonality', i)
   output_tree(sim_path, binary_sample$tree)
-  output_simulation(sim_path,binary_sample, 'MPNS')
+  output_simulation(sim_path,binary_sample, 'Clonality')
 }
 
+### Continuous case
 # From rBIEN package
 # Maitner, Brian S., Brad Boyle, Nathan Casler, Rick Condit, John Donoghue, Sandra M. Durán, Daniel Guaderrama, et al. ‘The bien r Package: A Tool to Access the Botanical Information and Ecology Network (BIEN) Database’. Edited by Sean McMahon. Methods in Ecology and Evolution 9, no. 2 (February 2018): 373–79. https://doi.org/10.1111/2041-210X.12861.
 
 
 bien_trait_list = BIEN::BIEN_trait_list()
-# FAMILIES_OF_INTEREST = c('Gelsemiaceae', 'Gentianaceae', 'Apocynaceae', 'Loganiaceae', 'Rubiaceae')
-# for (trait in bien_trait_list){
-#   binary_trait = data.frame()
-#   for (fam in FAMILIES_OF_INTEREST) {
-#     fam_df = BIEN::BIEN_trait_traitbyfamily(family=fam, trait=trait)
-#     binary_trait = rbind(binary_trait,fam_df)
-#   }
-#   if(length(unique(binary_trait$trait_value))){
-#     print(trait)
-#     print(unique(binary_trait$trait_value))
-#     print(length(unique(binary_trait$trait_value)))
-#
-#   }
-#
-# }
+FAMILIES_OF_INTEREST = c('Gelsemiaceae', 'Gentianaceae', 'Apocynaceae', 'Loganiaceae', 'Rubiaceae')
+
 
 
 cont_df = data.frame()
@@ -53,7 +49,7 @@ for (fam in FAMILIES_OF_INTEREST) {
   continuous_trait = BIEN::BIEN_trait_traitbyfamily(family=fam, trait='seed mass')
   cont_df = rbind(cont_df,continuous_trait)
 }
-to_cite = BIEN::BIEN_metadata_citation(trait.dataframe=cont_df, bibtex_file = 'bien.bib', acknowledgement_file='bien.txt')
+to_cite = BIEN::BIEN_metadata_citation(trait.dataframe=cont_df, bibtex_file = file.path("real_data",'ultrametric', 'Seed Mass','bien.bib'), acknowledgement_file='bien.txt')
 articles = to_cite$references
 
 ## Tidy the collected data a bit
