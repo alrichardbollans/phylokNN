@@ -6,10 +6,6 @@ This repository also includes analysis of this model against other conventional 
 
 ## Usage
 
-To install with pip, run:
-
-`pip install git+https://github.com/alrichardbollans/phylokNN`
-
 How to set up and run the model:
 
 ```python
