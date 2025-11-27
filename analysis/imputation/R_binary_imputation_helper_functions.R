@@ -6,32 +6,8 @@ possible_rate_cats = c(1,2)
 
 repo_path = Sys.getenv('KEWSCRATCHPATH')
 source(file.path(repo_path, 'phyloKNN', 'analysis', 'data','helpful_phyl_methods.R'))
-input_data_path = file.path(repo_path, 'phyloKNN', 'analysis', 'data')
 prediction_path = file.path(repo_path, 'phyloKNN', 'analysis', 'imputation')
 
-
-get_iteration_path_from_base <- function(base, case, ev_model, iteration) {
-  if (ev_model == "BiSSE" || ev_model == "HiSSE") {
-    basepath <- file.path(base,'simulations', case, ev_model)
-  } else if(ev_model %in% c('Clonality', 'Seed Mass')){
-    basepath = file.path(base, 'real_data', case, ev_model)
-    
-  }else if(ev_model %in% c('APM')){
-    basepath = file.path(base, 'my_apm_data', case, ev_model)
-    
-  }else {
-    basepath = file.path(base, 'simulations', case, 'standard')
-  }
-
-   treepath = file.path(basepath, as.character(iteration))
-    value_path = file.path(basepath, as.character(iteration), ev_model)
-
-  return(list(treepath=treepath,value_path=value_path ))
-}
-
-get_input_data_paths <- function(case, ev_model, iteration) {
-  return(get_iteration_path_from_base(input_data_path, case, ev_model, iteration))
-}
 
 get_prediction_data_paths <- function(case, ev_model, iteration, missingness_type) {
   return(file.path(prediction_path, case, ev_model, as.character(iteration), missingness_type))
@@ -66,22 +42,7 @@ format_corhmm <- function(corhmm_output, plant_names_to_predict, ratecat){
   return(output_data)
 }
 
-set_up <- function(case, ev_model, iteration, missing_type){
-  
-  input_data = get_input_data_paths(case, ev_model, iteration)
-
-  missing_values = read.csv(file.path(input_data$value_path, paste(missing_type,'_values.csv',sep='')))
-  
-
-  prepared_tree = ape::read.tree(file.path(input_data$treepath, 'tree.tre'))
-
-  # prepared_tree = set_labels_on_tree_to_acc_name(tree)
-  labelled_tree = get_subset_of_tree_from_data(missing_values,prepared_tree)
-  missing_values_with_tree_labels=get_matching_labels(labelled_tree,missing_values)
-  
-  target = names(missing_values)[2]
-  non_missing_data = missing_values_with_tree_labels[!is.na(missing_values_with_tree_labels[[target]]),]
-  
+get_folds <- function(non_missing_data){
   if(length(unique(non_missing_data[[target]])) == 1) {
     skfolds =NULL
     unique_target = unique(non_missing_data[[target]])[1]
@@ -91,13 +52,7 @@ set_up <- function(case, ev_model, iteration, missing_type){
     skfolds = caret::createFolds(non_missing_data[[target]], k=number_of_folds)
     unique_target = NULL
   }
-  
-  
-  
-  training_tree = get_subset_of_tree_from_data(subset(non_missing_data, select = c("accepted_species")),labelled_tree)
-  
-  return(list(labelled_tree=labelled_tree, missing_values_with_tree_labels=missing_values_with_tree_labels,
-              target=target, non_missing_data=non_missing_data, skfolds=skfolds, training_tree=training_tree, unique_target=unique_target))
+  return(skfolds)
 }
 
 calculate_brier <- function(y_score,y_true){
@@ -134,7 +89,7 @@ run_corHMM_models <- function(case, simulation_ev_model, iteration, missing_type
       missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
       target = setup_$target
       non_missing_data = setup_$non_missing_data
-      skfolds = setup_$skfolds
+      skfolds = get_folds(non_missing_data)
       training_tree = setup_$training_tree
       unique_target = setup_$unique_target
       
@@ -330,7 +285,7 @@ run_picante_models <- function(case, simulation_ev_model, iteration, missing_typ
     missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
     target = setup_$target
     non_missing_data = setup_$non_missing_data
-    skfolds = setup_$skfolds
+    skfolds = get_folds(non_missing_data)
     training_tree = setup_$training_tree
     if(!ape::is.binary(training_tree)){
       training_tree=ape::multi2di(training_tree)

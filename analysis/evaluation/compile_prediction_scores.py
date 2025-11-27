@@ -84,14 +84,22 @@ def evaluate_model_outputs_for_specific_case(case: str, ev_model: str, iteration
     treepath, data_path = get_input_data_paths(case, ev_model, iteration)
     out_dict = {}
 
+    # Get some information about test scenario
     bin_or_cont = get_bin_or_cont_from_ev_model(ev_model)
 
     out_dict['Ev Model'] = ev_model
     out_dict['Missing Type'] = missing_type
     out_dict['Tree Type'] = case
     out_dict['Variable Type'] = bin_or_cont
-    model_names = get_model_names(bin_or_cont)
 
+    if bin_or_cont == 'binary':
+        signal_df = pd.read_csv(os.path.join(data_path, 'phylogenetic_signal_results_D.csv'), index_col=0)
+
+    else:
+        signal_df = pd.read_csv(os.path.join(data_path, 'phylogenetic_signal_results_lambda.csv'), index_col=0)
+    signal = signal_df['value'].iloc[0]
+    out_dict['Signal'] = signal
+    # Compile predictions on test data with ground truth
     ground_truth = pd.read_csv(os.path.join(data_path, 'ground_truth.csv'), index_col=0)
     assert len(ground_truth.columns) == 1
     missing_values = pd.read_csv(os.path.join(data_path, f'{missing_type}_values.csv'), index_col=0)
@@ -107,6 +115,7 @@ def evaluate_model_outputs_for_specific_case(case: str, ev_model: str, iteration
     for df in dfs:
         full_df = pd.merge(full_df, df, left_index=True, right_index=True)
 
+    # Check some potential issues
     issues = full_df[full_df['phylnn_fill_means'].isna()]
     assert len(issues) == 0
 
@@ -117,6 +126,9 @@ def evaluate_model_outputs_for_specific_case(case: str, ev_model: str, iteration
     # else:
     #     if 'phylnn_raw' in full_df:
     #         full_df = full_df.drop('phylnn_raw', axis=1)
+
+    # Get scores for model names
+    model_names = get_model_names(bin_or_cont)
     if len(full_df) > 0:
         for model_name in model_names:
             if model_name in full_df.columns:

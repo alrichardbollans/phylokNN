@@ -3,7 +3,7 @@
 library(phytools)
 library(ape)
 
-#source('helpful_phyl_methods.R')
+source('helpful_phyl_methods.R')
 source('helper_simulation_methods.R')
 source('add_eigenvectors.R')
 repo_path = Sys.getenv('KEWSCRATCHPATH')
@@ -60,6 +60,6 @@ for (i in 1:number_of_folds) {
   decompose_tree(file.path('my_apm_data', 'ultrametric', 'APM', i))
 }
 
-
-
-
+for (i in 1:number_of_folds) {
+  get_D_table(ground_truth, useful_tree,'APM.Activity',file.path('my_apm_data', 'ultrametric', 'APM', i, 'APM') )
+}

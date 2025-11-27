@@ -33,7 +33,7 @@ run_phylopars_models <- function(case, simulation_ev_model, iteration, missing_t
     missing_values_with_tree_labels = setup_$missing_values_with_tree_labels
     target = setup_$target
     non_missing_data = setup_$non_missing_data
-    skfolds = setup_$skfolds
+    skfolds = get_folds(non_missing_data)
     training_tree = setup_$training_tree
     # if(!ape::is.ultrametric(training_tree)){
     #   training_tree = phytools::force.ultrametric(training_tree) # phylopars needs an ultrametric tree but only for OU model
