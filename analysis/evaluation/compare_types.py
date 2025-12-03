@@ -21,7 +21,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
     err_kws = {"color": ".2", "linewidth": 1.5}
     ## do a useful plot
     ## Turn  Model columns into useful row values
-    p_df = pd.melt(bin_df, id_vars=group, value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
+    p_df = pd.melt(bin_df, id_vars=group, value_vars=bin_model_names, var_name='Model', value_name='Brier Score')
     # p_df['Ev Model'] = p_df['Ev Model'].map(
     #     {'simulations': 'ARD/SYM/ER', 'Extinct_BMT': 'BMT †', 'real_data': 'Clonality'}).fillna(p_df['Ev Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
@@ -29,7 +29,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
         ev_order = simulation_types['binary']
         p_df = p_df.sort_values(by="Ev Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
 
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue=group, order=binary_model_order,
+    g = sns.barplot(p_df, x='Model', y='Brier Score', hue=group, order=binary_model_order,
                     capsize=.4,
                     err_kws=err_kws)
     g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
@@ -44,7 +44,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
     if group == 'Ev Model':
         # For readability don't plot semisupervised versions here
         p_df = p_df.sort_values(by="Model", key=lambda column: column.map(lambda e: binary_model_order.index(e)))
-        g = sns.barplot(p_df[~p_df['Model'].str.contains('*', regex=False)], x=group, y='Mean Loss', hue='Model',
+        g = sns.barplot(p_df[~p_df['Model'].str.contains('*', regex=False)], x=group, y='Brier Score', hue='Model',
                         order=ev_order, capsize=.4,
                         err_kws=err_kws, )
         g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
@@ -57,14 +57,14 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
         plt.close()
 
     ## do a useful plot
-    p_df = pd.melt(cont_df, id_vars=group, value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
+    p_df = pd.melt(cont_df, id_vars=group, value_vars=cont_model_names, var_name='Model', value_name='Mean Absolute Error')
     # p_df['Ev Model'] = p_df['Ev Model'].map(
     #     {'simulations': 'BM/OU', 'Extinct_BMT': 'BMT †', 'real_data': 'Seed Mass'}).fillna(p_df['Ev Model'])
     p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
     if group == 'Ev Model':
         ev_order = simulation_types['continuous']
         p_df = p_df.sort_values(by="Ev Model", key=lambda column: column.map(lambda e: ev_order.index(e)))
-    g = sns.barplot(p_df, x='Model', y='Mean Loss', hue=group, order=continuous_model_order,
+    g = sns.barplot(p_df, x='Model', y='Mean Absolute Error', hue=group, order=continuous_model_order,
                     capsize=.4,
                     err_kws=err_kws,
                     )
@@ -80,7 +80,7 @@ def plot_binary_and_continuous_cases(bin_df, cont_df, group, out_dir):
 
     if group == 'Ev Model':
         p_df = p_df.sort_values(by="Model", key=lambda column: column.map(lambda e: continuous_model_order.index(e)))
-        g = sns.barplot(p_df, x='Ev Model', y='Mean Loss', hue='Model', order=ev_order,
+        g = sns.barplot(p_df, x='Ev Model', y='Mean Absolute Error', hue='Model', order=ev_order,
                         capsize=.4,
                         err_kws=err_kws,
                         )

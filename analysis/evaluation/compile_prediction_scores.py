@@ -204,18 +204,18 @@ def read_all_results(output_too=False):
         continuous_df.describe(include='all').to_csv(os.path.join('compiled_score_outputs', 'continuous_results_summary.csv'))
         sns.set_theme()
         err_kws = {"color": ".2", "linewidth": 1.5}
-        p_df = pd.melt(binary_df, value_vars=bin_model_names, var_name='Model', value_name='Mean Loss')
+        p_df = pd.melt(binary_df, value_vars=bin_model_names, var_name='Model', value_name='Brier Score')
         p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
-        g = sns.barplot(p_df, x='Model', y='Mean Loss', order=binary_model_order,
+        g = sns.barplot(p_df, x='Model', y='Brier Score', order=binary_model_order,
                         capsize=.4, err_kws=err_kws)
         g.set_xticklabels(g.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
         plt.tight_layout()
         plt.savefig(os.path.join('compiled_score_outputs', 'binary_means.jpg'), dpi=300)
         plt.close()
 
-        p_df = pd.melt(continuous_df, value_vars=cont_model_names, var_name='Model', value_name='Mean Loss')
+        p_df = pd.melt(continuous_df, value_vars=cont_model_names, var_name='Model', value_name='Mean Absolute Error')
         p_df['Model'] = p_df['Model'].map(rename_models_and_ev_models).fillna(p_df['Model'])
-        g = sns.barplot(p_df, x='Model', y='Mean Loss', order=continuous_model_order,
+        g = sns.barplot(p_df, x='Model', y='Mean Absolute Error', order=continuous_model_order,
                         capsize=.4,
                         err_kws=err_kws,
                         )
