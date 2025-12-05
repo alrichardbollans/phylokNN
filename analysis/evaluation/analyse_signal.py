@@ -143,14 +143,14 @@ def main():
     #
     # #  phylogenetic imputation may perform poorly when lambda is less than 0.6 (Molina-Venegas et al., 2018)
     # ## compare models with signal above 0.6 and signal below 0.6
-    # binary_above_06_df = bin_df[bin_df['Signal'] <= 0.4]
-    # continuous_above_06_df = cont_df[cont_df['Signal'] >= 0.6]
-    # plot_binary_and_continuous_cases(binary_above_06_df, continuous_above_06_df, 'Ev Model',
-    #                                  os.path.join(out_dir, 'strong signal'))
-    # binary_above_06_df.describe(include='all').to_csv(os.path.join(out_dir, 'strong signal', 'binary_results_summary.csv'))
-    # continuous_above_06_df.describe(include='all').to_csv(os.path.join(out_dir, 'strong signal', 'continuous_results_summary.csv'))
+    binary_above_06_df = bin_df[bin_df['Signal'] <= 0.5]
+    continuous_above_06_df = cont_df[cont_df['Signal'] >= 0.6]
+    plot_binary_and_continuous_cases(binary_above_06_df, continuous_above_06_df, 'Ev Model',
+                                     os.path.join(out_dir, 'strong signal'))
+    binary_above_06_df.describe(include='all').to_csv(os.path.join(out_dir, 'strong signal', 'binary_results_summary.csv'))
+    continuous_above_06_df.describe(include='all').to_csv(os.path.join(out_dir, 'strong signal', 'continuous_results_summary.csv'))
 
-    binary_below_06_df = bin_df[bin_df['Signal'] > 0.4]
+    binary_below_06_df = bin_df[bin_df['Signal'] > 0.5]
     continuous_below_06_df = cont_df[cont_df['Signal'] < 0.6]
     plot_binary_and_continuous_cases(binary_below_06_df, continuous_below_06_df, 'Ev Model', os.path.join(out_dir, 'weak signal'))
     binary_below_06_df.describe(include='all').to_csv(os.path.join(out_dir, 'weak signal', 'binary_results_summary.csv'))
