@@ -4,7 +4,7 @@ setup(
     name='phylokNN',
     description='A package for phylogenetic nearest neighbour analysis',
     license='Attribution-NonCommercial-ShareAlike 4.0 International',
-    packages=find_packages(include=['phylokNN']),
+    packages=find_packages(include=['phylokNN', 'phyloAutoEncoder']),
 
     install_requires=[
         "pandas",

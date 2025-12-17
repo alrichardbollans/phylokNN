@@ -58,7 +58,7 @@ def autoencode_pairwise_distances(distance_data: pd.DataFrame, reduction_fractio
     if plot:
         ## Display of the model
         # Followed https://github.com/keras-team/keras/issues/10638#issuecomment-450605726 to improve plot.
-        keras.utils.plot_model(autoencoder, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder.png'), show_shapes=True,
+        keras.utils.plot_model(autoencoder, to_file=os.path.join(_output_dir, 'phylogeny_autoencoder.svg'), show_shapes=True,
                                show_dtype=False,
                                show_layer_names=True,
                                rankdir='TB',
