@@ -2,8 +2,6 @@
 
 A Python package translating the concept of k Nearest Neighbours to phylogenetic trees for predicting trait values.
 
-This repository also includes analysis of this model against other conventional and less conventional approaches.
-
 ## Usage
 
 How to set up and run the model:
