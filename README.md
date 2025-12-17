@@ -4,6 +4,11 @@ A Python package translating the concept of k Nearest Neighbours to phylogenetic
 
 ## Usage
 
+To install with pip, run:
+
+`pip install git+https://github.com/alrichardbollans/phylokNN`
+
+
 How to set up and run the model:
 
 ```python
